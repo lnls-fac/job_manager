@@ -1,0 +1,8 @@
+#!/bin/bash
+n=0
+while [ $n -lt 10 ]
+do
+    ls
+    sleep 3 
+    n=$(($n+1))
+done
