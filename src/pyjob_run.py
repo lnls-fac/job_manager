@@ -28,7 +28,8 @@ JOBDONE       = 'done'
 SUBMITSCR= ( 
 '''#!/bin/bash
 
-./{0} > {1:08d}.out 2> {1:08d}.err
+echo $(hostname) > {1:08d}.out
+./{0} >> {1:08d}.out 2> {1:08d}.err
 touch {2} ''')
 SUBMITSCRNAME = 'run_{0:08d}'
 WAIT_TIME = Global.WAIT_TIME

@@ -51,8 +51,8 @@ def main():
     parser.add_option('-c','--choose',dest='choose',type='str',
                       help="If this option is given, the user can specify which "
                       "job properties will be shown. [format: "
-                      "prop1,prop2,...  default: 'prior,status,user,creation_"
-                      "date,runninghost,description']. It is not needed to give "
+                      "prop1,prop2,...  default: 'prior,status,user,runninghost,"
+                      "running_time,description']. It is not needed to give "
                       "the whole property name, only a fraction of it is enough."
                       "Possible Values:\n" + ', '.join(list(PROPERTIES.keys())))
     
@@ -81,7 +81,7 @@ def main():
         print(err)
         return
 
-    choose = 'prior,status,user,creation_date,runninghost,description'
+    choose = 'prior,status,user,runninghost,running_time,description'
     if opts.choose is not None:
         choose = opts.choose
     
