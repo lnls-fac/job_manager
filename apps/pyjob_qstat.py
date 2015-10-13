@@ -3,7 +3,8 @@
 import optparse
 import Global
 
-STATUS = Global.STATUS
+STATUS      = Global.STATUS
+PROPERTIES  = Global.PROPERTIES
 
 EXPLICATION = dict(q='In the queue',
               qu='The user scheduled the job back to the queue but the'
@@ -24,22 +25,7 @@ EXPLICATION = dict(q='In the queue',
               e='Job ended successfully.',
               s='Job has been sent to the host, but its current status was not'
               ' confirmed yet.')
-iden= lambda x:str(x)
-PROPERTIES = dict(description=('{:^20s}','Description',iden),
-                  user=('{:^10s}','User',iden),
-                  working_dir=('{:^20s}','Working Directory',iden),
-                  creation_date=('{:^13s}','Creation',
-                                 lambda x:x.strftime('%m/%d %H:%M')),
-                  status_key=('{:^8s}','Status',iden),
-                  hostname=('{:^10s}','Hostname', lambda x:x.split('-')[0]),
-                  priority=('{:^7s}','Prior', iden),
-                  runninghost=('{:^10s}','Run Host',lambda x:(x or "_"
-                                                              ).split('-')[0]),
-                  possiblehosts=('{:^20s}','Can Run On',
-                                lambda x:x if x=='all' else 
-                                ','.join([y.split('-')[0]
-                                for y in sorted(x)])),
-                  running_time=('{:^12s}','Time Run',iden))
+
 def main():
     parser = optparse.OptionParser()
     parser = Global.job_selection_parse_options(parser)
@@ -55,9 +41,9 @@ def main():
                       "running_time,description']. It is not needed to give "
                       "the whole property name, only a fraction of it is enough."
                       "Possible Values:\n" + ', '.join(list(PROPERTIES.keys())))
-    
+
     (opts, _) = parser.parse_args()
-    
+
     if opts.explicate:
         print('{:^6s}{:^74s}'.format('STATUS', 'EXPLICATION'))
         for k,v in sorted(EXPLICATION.items(),key=lambda x:x[0]):
@@ -73,7 +59,7 @@ def main():
                     print('\n',' '*4,v[ii], end=' ')
             print('\n')
         return
-    
+
 
     try:
         Queue = Global.job_selection_parse(opts)
@@ -84,14 +70,14 @@ def main():
     choose = 'prior,status,user,runninghost,running_time,description'
     if opts.choose is not None:
         choose = opts.choose
-    
+
     ordem = []
     for cho in choose.split(','):
         for k in sorted(PROPERTIES):
             if cho.lower() in k:
                 ordem += [k]
-    
-    
+
+
     if Queue:
         myprint('{:^7s}'.format('JobID'))
         for at in ordem:
@@ -103,9 +89,9 @@ def main():
             myprint(PROPERTIES[at][0].format(PROPERTIES[at][2](getattr(v,at))))
         print()
 
-    
+
 def myprint(*items):
     return print(*items,end='')
-    
+
 if __name__ == '__main__':
     main()

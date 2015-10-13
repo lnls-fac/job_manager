@@ -29,19 +29,49 @@ STATUS = dict(q=1, # queued
               tu=5.5,# terminated by the user
               e=6, # ended
               s=7) # sent
+PROPERTIES = dict(description   =('{:^20s}',
+                                  'Description',
+                                  lambda x:str(x)),
+                  user          =('{:^10s}',
+                                  'User',
+                                  lambda x:str(x)),
+                  working_dir   =('{:^20s}',
+                                  'Working Directory',
+                                  lambda x:str(x)),
+                  creation_date =('{:^13s}',
+                                 'Creation',
+                                 lambda x:x.strftime('%m/%d %H:%M')),
+                  status_key    =('{:^8s}',
+                                  'Status',
+                                  lambda x:str(x)),
+                  hostname      =('{:^10s}',
+                                  'Hostname',
+                                  lambda x:x.split('-')[0]),
+                  priority      =('{:^7s}',
+                                  'Prior',
+                                  lambda x:str(x)),
+                  runninghost   =('{:^10s}',
+                                  'Run Host',
+                                  lambda x:(x or "_").split('-')[0]),
+                  possiblehosts =('{:^20s}',
+                                  'Can Run On',
+                                  lambda x:x if x=='all' else ','.join([y.split('-')[0] for y in sorted(x)])),
+                  running_time  =('{:^12s}',
+                                  'Time Run',
+                                  lambda x:str(x)))
 
 class SocketManager:
     def __init__(self, address):
         self.address = address
-    
+
     def __enter__(self):
         self.sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
         self.sock.connect(self.address)
         return self.sock
-    
+
     def __exit__(self, *ignore):
         self.sock.close()
-class ServerDown(Exception): pass 
+class ServerDown(Exception): pass
 def handle_request(*items, wait_for_reply=True, exit_on_err=True):
     InfoStruct = struct.Struct(SET_STRUCT_PARAM)
     data = pickle.dumps(items,PICKLE_PROTOCOL)
@@ -72,7 +102,7 @@ def handle_request(*items, wait_for_reply=True, exit_on_err=True):
 
 class JobErr(Exception): pass
 class Jobs:
-   
+
     def __init__(self,
                  user = getpass.getuser(),
                  description = 'generic job',
@@ -88,18 +118,18 @@ class Jobs:
                  execution_script = dict(),#idem to input_files
                  output_files = dict()#keys -> names values are tuples of data
                  ):                   # and creation/modification times
-        
+
         self.description = description
-       
+
         try:
             pwd.getpwnam(user)
         except KeyError:
             raise JobErr('Specified user does not exist')
         else:
             self.user = user
-        
+
         self.working_dir = os.path.abspath(working_dir or os.getcwd())
-        
+
         self.creation_date = creation_date or datetime.datetime.now()
         self.status_key = status_key or 'q'
         self.hostname = hostname or socket.gethostname()
@@ -113,7 +143,7 @@ class Jobs:
         self.execution_script = execution_script
         # Load output files
         self.output_files = output_files
-    
+
 
     @property
     def input_file_names(self): return list(self.input_files.keys())
@@ -121,8 +151,8 @@ class Jobs:
     def output_file_names(self): return list(self.output_files.keys())
     @property
     def execution_script_name(self): return list(self.execution_script.keys())[0]
-        
-    
+
+
     def __lt__(self,other):
         if not isinstance(other, Jobs):
             return NotImplemented
@@ -134,23 +164,23 @@ class Jobs:
             if self.creation_date < other.creation_date:
                 return True
             return False
-        
+
     def __eq__(self,other):
         if not isinstance(other, Jobs):
             return NotImplemented
-        elif ((not (self < other or other < self)) and 
+        elif ((not (self < other or other < self)) and
               self.possiblehosts == other.possiblehosts and
               self.status_key == other.status_key):
             return True
         else:
             return False
-    
+
     def __le__(self,other):
         return True if self == other or self < other else False
-    
+
     def __repr__(self):
         return representational_form(self)
-   
+
     def __str__(self):
         return ("description = {0.description},\n"
                 "user = {0.user},\n"
@@ -165,14 +195,14 @@ class Jobs:
                 "execution_script_name = {0.execution_script_name},\n"
                 "output_file_names = {0.output_file_names}"
                 .format(self))
-    
+
     def __hash__(self):
         return hash(id(self))
-    
+
     def update(self, other):
         self.description = other.description
         self.user = other.user
-        self.working_dir = other.working_dir                
+        self.working_dir = other.working_dir
         self.creation_date = other.creation_date
         self.status_key = other.status_key
         self.hostname = other.hostname
@@ -182,25 +212,25 @@ class Jobs:
         self.running_time = other.running_time
 
 class JobView(Jobs):
-   
+
     def __init__(self, other):
         self.update(other)
-        
+
     def __repr__(self):
         return representational_form(self)
-    
+
     def update(self, other):
         super().update(other)
 
 
 keyQueue= lambda x: x[1]
 class JobQueue(dict):
-    
+
     def __repr__(self):
         return ("{0}.{1}(".format(self.__class__.__module__,
                                   self.__class__.__name__)
                 + super().__repr__() + ")")
-    
+
     def poplast(self):
         try:
             key = list(self.items())[-1][0]
@@ -214,29 +244,29 @@ class JobQueue(dict):
         except IndexError:
             raise KeyError("popfirst(): dictionary is empty")
         return key, self.pop(key)
-    
+
     def values(self):
         for _, value in sorted(super().items(),key=keyQueue):
             yield value
         if len(self) == 0: super().values()
-    
+
     def items(self):
         for key, value in sorted(super().items(),key=keyQueue):
             yield key, value
         if len(self) == 0: super().items()
-    
+
     def __iter__(self):
         for key, _ in sorted(super().items(),key=keyQueue):
             yield key
         if len(self) == 0: super().keys()
-    
+
     keys = __iter__
-            
+
     def copy(self):
         return JobQueue(self)
-    
+
     __copy__ = copy
-    
+
     def SelAttrVal(self,attr='status_key', value={'r'}):
         newqueue = JobQueue()
         if isinstance(value, set):
@@ -248,7 +278,7 @@ class JobQueue(dict):
             if value in v.__getattribute__(attr):
                     newqueue.update({k:v})
         return newqueue
-    
+
 class Configs:
     def __init__(self, shutdown=False, MoreJobs=True, niceness=0,
                  defNumJobs=0, Calendar = dict(), active='on',
@@ -263,7 +293,7 @@ class Configs:
         self.last_contact = last_contact
         self.running = running
         self.totalJobs = totalJobs
-        
+
     def __repr__(self):
         return representational_form(self)
 
@@ -278,26 +308,26 @@ class MimicsPsutilPopen(psutil.Process):
     @property
     def returncode(self):
         return self.__returncode
-    
+
     def poll(self):
         if self.is_running() and self.status != 'zombie':
             self.__returncode = None
         else:
             self.__returncode = signal.SIGTERM
         return self.__returncode
-    
+
     def send_signal(self, sign):
         super().send_signal(sign)
         self.__returncode = sign
-    
+
     def kill(self):
         super().kill(signal.SIGKILL)
         self.__returncode = signal.SIGKILL
-    
+
     def terminate(self):
         super().terminate()
         self.__returncode = signal.SIGTERM
-     
+
 class MyStats:
     def __init__(self, name=None, st_mode=0o664,
                  st_atime = None, st_mtime = None):
@@ -310,11 +340,11 @@ class MyStats:
             self.st_mode = st_mode
             self.st_atime = st_atime
             self.st_mtime = st_mtime
-            
+
     def __repr__(self):
         return representational_form(self)
-        
-     
+
+
 def createfile(name= None, data=None, stats = MyStats()):
     if not name:
         raise ValueError('Name not specified')
@@ -322,10 +352,10 @@ def createfile(name= None, data=None, stats = MyStats()):
         os.remove(name)
     except:
         pass
-    
+
     if isinstance(data,str):
         data = data.encode('utf-8')
-    
+
     try:
         with open(name,mode='wb') as fh:
             fh.write(data)
@@ -351,8 +381,9 @@ def load_file(name, ignore=False):
         return None
     file_stats = MyStats(name)
     return file_stats, file_data
+
 def representational_form(ob):
-    form ="{0}.{1}(" + ",  ".join(["{0} = {{2.{0}!r}}".format(x) 
+    form ="{0}.{1}(" + ",  ".join(["{0} = {{2.{0}!r}}".format(x)
                                    for x in sorted(ob.__dict__.keys())
                                    if not x.startswith("_")]) + ")"
     return form.format(ob.__class__.__module__, ob.__class__.__name__, ob)
@@ -373,18 +404,18 @@ def job_selection_parse_options(parser):
                      help="Select the jobs by a segment of their description.")
     return parser
 def job_selection_parse(opts):
-    
+
     ok, Queue = handle_request('STATUS_QUEUE')
     if not ok:
         print("I don't know what happened, but the server did not respond"
               "as expected. maybe its a bug")
         return
-    
+
     if opts.jobs and any((opts.status,opts.user,opts.descr)):
         print('When the option -j is given the other Job Selection Options'
               'can not be used.')
         return
-    
+
     if opts.jobs is not None:
         try:
             jobs = set([ int(x) for x in opts.jobs.split(',')])
@@ -395,20 +426,20 @@ def job_selection_parse(opts):
             raise JobSelParseErr('These jobs do not exist:' +
                                   ' '.join(nonexistent_jobs))
         Queue = JobQueue({k:v for k,v in Queue.items() if k in jobs})
-    
+
     if opts.status is not None:
         status = set(opts.status.split(','))
         if len(status - STATUS.keys()):
             raise JobSelParseErr('Wrong status specification. '
-                                 'Possible values are:' + 
+                                 'Possible values are:' +
                   ' '.join(list(k for k,v in sorted(STATUS.items(),
                                                     key= lambda x: x[1]))))
         Queue = Queue.SelAttrVal(attr='status_key',value=status)
-        
+
     if opts.user is not None:
         user = set(opts.user.split(','))
         Queue = Queue.SelAttrVal(attr='user',value=user)
-    
+
     if opts.descr is not None:
         Queue = Queue.SelAttrVal(attr='description',value=opts.descr)
 
@@ -426,9 +457,9 @@ def match_clients(keys2Match, possibleClients = None):
         ok, data = handle_request('GET_CONFIGS','all')
         if ok:
             possibleClients = data
-        else: 
+        else:
             raise MatchClientsErr('Could not get configs of server.')
-    
+
     ConfigsMatched = dict()
     for client in keys2Match:
         keys = set(possibleClients.keys())
@@ -450,7 +481,3 @@ if __name__ == '__main__':
     job.update(jobview)
     jobview.update(job2)
     print(jobview.running_time)
-
-    
-
-
