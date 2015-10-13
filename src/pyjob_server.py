@@ -151,14 +151,13 @@ class RequestHandler(socketserver.StreamRequestHandler):
 
         with self.QueueLock:
             for k, v in ItsQueue.items():
-                if v.status_key in {'e','t','q'}:
+                if not isinstance(v,Global.JobView) and v.status_key in {'e','t','q'}:
                     keys2remove.append(k)
                     self.Queue.update({k:v}) # not a jobview
+                elif isinstance(v,Global.JobView):
+                    self.Queue[k].update(v)# jobview
                 else:
-                    try:
-                        self.Queue[k].update(v)# jobview
-                    except KeyError:
-                        self.Queue.update({k:v})# not a jobview
+                    self.Queue.update({k:v})# not a jobview
 
         return (True, keys2remove)
 

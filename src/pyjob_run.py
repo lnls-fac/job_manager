@@ -340,10 +340,11 @@ def main():
             if ok:
                 NotMine = deal_with_signals(Queue2Deal)
 
-            # Just send the complete jobs if needed, otherwise send jobviews
+            #These are jobviews of the jobs we don't have:
             Queue2Send = Global.JobQueue()
             for k,v in NotMine.items():
                 Queue2Send.update({k:v})
+            # Just send the complete jobs if needed, otherwise send jobviews
             for k, v in MyQueue.items():
                 if v.status_key in {'e','t','q'}:
                     Queue2Send.update({k:v})
