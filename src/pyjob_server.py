@@ -133,7 +133,7 @@ class RequestHandler(socketserver.StreamRequestHandler):
         ordem = ['creation_date','runninghost','description']
         data = ''
         for k,v in Jobs2Send.items():
-            data += b'{:^7d}'.format(k)
+            data += '{:^7d}'.format(k)
             for at in ordem:
                 data += PROPERTIES[at][0].format(PROPERTIES[at][2](getattr(v,at)))
             data += '\n'
