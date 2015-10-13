@@ -133,12 +133,13 @@ class RequestHandler(socketserver.StreamRequestHandler):
         ordem = ['creation_date','runninghost','description']
         data = ''
         for k,v in Jobs2Send.items():
-            data += '{:^7d}'.format(k)
+            data += b'{:^7d}'.format(k)
             for at in ordem:
                 data += PROPERTIES[at][0].format(PROPERTIES[at][2](getattr(v,at)))
             data += '\n'
         try:
-            with open(os.path.join(CONFIGFOLDER,SUBMITTED_FILENAME),mode='ab') as fh:
+            name = os.path.join(CONFIGFOLDER,SUBMITTED_FILENAME)
+            with open(name,mode='a') as fh:
                 fh.write(data)
         except (TypeError, IOError, OSError) as err:
             print('Problem with file {0}:\n'.format(name),err)
