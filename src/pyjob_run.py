@@ -179,7 +179,7 @@ def update_jobs_running(njobsallowed):
 
     #Then, if it still can run more jobs, I ask the server for new ones:
     if i < njobsallowed:
-        ok, NewQueue = handle_request('GIME_JOBS',njobs2sub)
+        ok, NewQueue = handle_request('GIME_JOBS',njobsallowed-i)
         if ok:
             for k, v in NewQueue.items():
                 submit_job(k,v)
@@ -290,7 +290,7 @@ def update_jobs_on_server_and_remove_finished_jobs(Queue2Send):
             MyQueue.pop(key)
             shutil.rmtree('/'.join([TEMPFOLDER,FOLDERFORMAT.format(key)]))
 
-def get_results_from_server_and_save(ResQueue):
+def get_results_from_server_and_save():
     ok, ResQueue = handle_request('GIME_RESULTS')
     if not ok: return
 
@@ -334,7 +334,7 @@ MyConfigs = Global.Configs()
 def main():
 
     load_jobs_from_last_run()
-    load_data_of_finished_jobs()
+    locally_update_jobs_status()
 
     while True:
         try:
@@ -353,7 +353,7 @@ def main():
             get_results_from_server_and_save()
 
             time.sleep(WAIT_TIME)
-            
+
         except psutil._error.NoSuchProcess:
             continue
         except Global.ServerDown:
