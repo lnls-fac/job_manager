@@ -39,6 +39,27 @@ WAIT_TIME = Global.WAIT_TIME
 def handle_request(*items):
     return Global.handle_request(*items, exit_on_err = False)
 
+def signal_handler(sig, frame):
+    if sig == signal.SIGTERM:
+        shutdown()
+    elif sig == signal.SIGUSR1:
+        pause()
+
+def shutdown():
+    ok = handle_request('GOODBYE', True)
+    if ok:
+        sys.exit()
+    sys.exit(1)
+
+def pause():
+    handle_request('GOODBYE', False)
+    time.sleep(2*WAIT_TIME)
+
+def wait_for_server():
+    time.sleep(WAIT_TIME)
+
+
+
 def load_jobs_from_last_run():
     ''' Check if there are jobs running from last call of the script.
     Change the status to ended if the job terminated in between calls
@@ -62,8 +83,7 @@ def load_jobs_from_last_run():
             state = proc.poll()
             folder = FOLDERFORMAT.format(jobid)
             if (state is not None or
-                proc.name not in '/'.join([folder,
-                                           SUBMITSCRNAME.format(jobid)])):
+               proc.name not in '/'.join([folder,SUBMITSCRNAME.format(jobid)])):
                 if os.path.isfile('/'.join([TEMPFOLDER,folder,JOBDONE])):
                     job.status_key = 'e'
                 else:
@@ -73,27 +93,6 @@ def load_jobs_from_last_run():
                     job.status_key = 'p'
             jobid2proc.update({jobid : proc})
             MyQueue.update({jobid : job})
-
-def signal_handler(sig, frame):
-    if sig == signal.SIGTERM:
-        shutdown()
-    elif sig == signal.SIGUSR1:
-        pause()
-
-def shutdown():
-    ok = handle_request('GOODBYE', True)
-    if ok:
-        sys.exit()
-    sys.exit(1)
-
-def pause():
-    handle_request('GOODBYE', False)
-    time.sleep(2*WAIT_TIME)
-
-def wait_for_server():
-    time.sleep(WAIT_TIME)
-
-
 
 def get_and_deal_with_configs():
 
@@ -166,16 +165,17 @@ def update_jobs_running(njobsallowed):
     i = 0
     CanChangeQueue = MyQueue.SelAttrVal(attr='status_key', value={'p','r'})
     for k, v in CanChangeQueue.items():
-        if jobid2proc[k].poll() is not None:
+        try:
+            if i < njobsallowed:
+                os.killpg(jobid2proc[k].pid,signal.SIGCONT)
+                v.status_key = 'r'
+                i +=1
+            else:
+                os.killpg(jobid2proc[k].pid,signal.SIGSTOP)
+                v.status_key = 'p'
+            MyQueue.update({k:v})
+        except ProcessLookupError:
             continue
-        if i < njobsallowed:
-            os.killpg(jobid2proc[k].pid,signal.SIGCONT)
-            v.status_key = 'r'
-            i +=1
-        else:
-            os.killpg(jobid2proc[k].pid,signal.SIGSTOP)
-            v.status_key = 'p'
-        MyQueue.update({k:v})
 
     #Then, if it still can run more jobs, I ask the server for new ones:
     if i < njobsallowed:
@@ -349,11 +349,9 @@ def main():
             #Only send the complete jobs if needed, otherwise send jobviews
             update_jobs_on_server_and_remove_finished_jobs(Queue2Send)
 
-
             get_results_from_server_and_save()
 
             time.sleep(WAIT_TIME)
-
         except psutil._error.NoSuchProcess:
             continue
         except Global.ServerDown:

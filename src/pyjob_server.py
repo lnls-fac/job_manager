@@ -197,7 +197,6 @@ class RequestHandler(socketserver.StreamRequestHandler):
 
         return (True, Queue2Send)
 
-
     def send_configs_to_client(self, ItsConfigs):
         clientName = get_client_name(self)
         with self.ConfigsLock:
