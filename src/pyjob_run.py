@@ -37,7 +37,14 @@ WAIT_TIME = Global.WAIT_TIME
 
 
 def handle_request(*items):
-    return Global.handle_request(*items, exit_on_err = False)
+    server_down = True
+    while server_down:
+        try:
+            result = Global.handle_request(*items, exit_on_err = False)
+            server_down = False
+        except Global.ServerDown:
+            time.sleep(WAIT_TIME)
+    return result
 
 def signal_handler(sig, frame):
     if sig == signal.SIGTERM:
@@ -54,9 +61,6 @@ def shutdown():
 def pause():
     handle_request('GOODBYE', False)
     time.sleep(2*WAIT_TIME)
-
-def wait_for_server():
-    time.sleep(WAIT_TIME)
 
 
 
@@ -337,25 +341,21 @@ def main():
     locally_update_jobs_status()
 
     while True:
-        try:
-            # Get configuration from server and deal with it
-            njobsallowed = get_and_deal_with_configs()
+        # Get configuration from server and deal with it
+        njobsallowed = get_and_deal_with_configs()
 
-            update_jobs_running(njobsallowed)
+        update_jobs_running(njobsallowed)
 
-            #Returns jobviews of the jobs this client doesn't have:
-            Queue2Send = get_and_deal_with_job_signals()
-            locally_update_jobs_status()
-            #Only send the complete jobs if needed, otherwise send jobviews
-            update_jobs_on_server_and_remove_finished_jobs(Queue2Send)
+        #Returns jobviews of the jobs this client doesn't have:
+        Queue2Send = get_and_deal_with_job_signals()
+        locally_update_jobs_status()
+        #Only send the complete jobs if needed, otherwise send jobviews
+        update_jobs_on_server_and_remove_finished_jobs(Queue2Send)
 
-            get_results_from_server_and_save()
+        get_results_from_server_and_save()
 
-            time.sleep(WAIT_TIME)
-        except psutil._error.NoSuchProcess:
-            continue
-        except Global.ServerDown:
-            wait_for_server()
+        time.sleep(WAIT_TIME)
+
 
 
 if __name__ == '__main__':
