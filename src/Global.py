@@ -210,7 +210,6 @@ class Jobs:
         self.runninghost = other.runninghost
         self.possiblehosts = other.possiblehosts
         self.running_time = other.running_time
-
 class JobView(Jobs):
 
     def __init__(self, other):
