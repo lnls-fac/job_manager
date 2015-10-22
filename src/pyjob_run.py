@@ -102,11 +102,14 @@ def get_and_deal_with_configs():
 
     # set nice of the job and its children
     def set_nice_process(proc):
-        if proc.get_nice() < MyConfigs.niceness:
-            proc.set_nice(MyConfigs.niceness)
-        proc_list = proc.get_children()
-        for proc in proc_list:
-            set_nice_process(proc)
+        try:
+            if proc.get_nice() < MyConfigs.niceness:
+                proc.set_nice(MyConfigs.niceness)
+            proc_list = proc.get_children()
+            for proc in proc_list:
+                set_nice_process(proc)
+        except psutil.NoSuchProcess:
+            return
 
     #get configs from server
     global MyConfigs
@@ -194,15 +197,16 @@ def get_and_deal_with_job_signals():
     ok, Queue2Deal = handle_request('STATUS_QUEUE', True)
     if not ok: return
 
-    # Verify if the server thinks this client has jobs
-    # which it doesn't and return them to the queue:
+    # Verify if the server thinks this client has jobs which it doesn't and
+    # return them to the queue in case they are not finished yet:
     NotMine = Global.JobQueue()
     isbigger = set(Queue2Deal.keys()) - set(MyQueue.keys())
     for k in isbigger:
         v = Queue2Deal.pop(k)
-        v.status_key  = 'q'
-        v.runninghost = None
-        NotMine.update({k:v})
+        if v.status_key not in {'e','t'}:
+            v.status_key  = 'q'
+            v.runninghost = None
+            NotMine.update({k:v})
 
     #Deal with jobs which are really ours:
     for k, v in Queue2Deal.items():
@@ -240,12 +244,15 @@ def locally_update_jobs_status():
 
     # get the time consumed by the job so far
     def get_time_process(proc):
-        a = proc.get_cpu_times()
-        time = a.system+a.user
-        proc_list = proc.get_children()
-        for proc in proc_list:
-            time += get_time_process(proc)
-        return time
+        try:
+            a = proc.get_cpu_times()
+            time = a.system+a.user
+            proc_list = proc.get_children()
+            for proc in proc_list:
+                time += get_time_process(proc)
+            return time
+        except psutil.NoSuchProcess:
+            return 0
 
     # finds out which jobs are finished
     count = 0
@@ -271,8 +278,7 @@ def locally_update_jobs_status():
             folder = '/'.join([TEMPFOLDER, FOLDERFORMAT.format(k)])
             files = os.listdir(path=folder)
             for file in set(files) - (v.input_files.keys() |
-                                       set([JOBDONE,
-                                            SUBMITSCRNAME.format(k)])):
+                                      set([JOBDONE, SUBMITSCRNAME.format(k)])):
                 data = Global.load_file(os.path.join(folder,file))
                 v.output_files.update({file: data})
             for file in v.input_files.keys(): # Reload the input_files
