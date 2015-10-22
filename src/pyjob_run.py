@@ -185,7 +185,7 @@ def update_jobs_running(njobsallowed):
             continue
 
     #Then, if it still can run more jobs, I ask the server for new ones:
-    if i < njobsallowed:
+    if (i < njobsallowed) and MyConfigs.MoreJobs:
         ok, NewQueue = handle_request('GIME_JOBS',njobsallowed-i)
         if ok:
             for k, v in NewQueue.items():
