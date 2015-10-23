@@ -352,6 +352,8 @@ def main():
 
         update_jobs_running(njobsallowed)
 
+        time.sleep(WAIT_TIME)
+        
         #Returns jobviews of the jobs this client doesn't have:
         Queue2Send = get_and_deal_with_job_signals()
         locally_update_jobs_status()
@@ -359,9 +361,6 @@ def main():
         update_jobs_on_server_and_remove_finished_jobs(Queue2Send)
 
         get_results_from_server_and_save()
-
-        time.sleep(WAIT_TIME)
-
 
 
 if __name__ == '__main__':
