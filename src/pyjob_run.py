@@ -44,6 +44,7 @@ def handle_request(*items):
             server_down = False
         except Global.ServerDown:
             time.sleep(WAIT_TIME)
+            locally_manage_jobs()
     return result
 
 def signal_handler(sig, frame):
@@ -117,9 +118,11 @@ def get_and_deal_with_configs():
 
     #get configs from server
     global MyConfigs
+    agora = datetime.datetime.now()
     ok, data = handle_request('GIME_CONFIGS', MyConfigs)
     if ok:
         MyConfigs = data
+        agora = MyConfigs.last_contact #It is preferable to use server's clock.
     # shutdown if requested:
     if MyConfigs.shutdown:
         shutdown()
@@ -128,56 +131,112 @@ def get_and_deal_with_configs():
         state = proc.poll()
         if state is None:
             set_nice_process(proc)
-    #updated number of jobs in this client
-    MyConfigs.totalJobs = len(MyQueue)
 
     #returns the number of jobs that can run in this client now:
-    agora = datetime.datetime.now()
     allowed = MyConfigs.Calendar.get((calendar.day_name[agora.weekday()],
                                       agora.hour, agora.minute),
                                      MyConfigs.defNumJobs)
     return allowed
 
-def submit_job(k, v):
-    #create temporary directory
-    tempdir = '/'.join([TEMPFOLDER,FOLDERFORMAT.format(k)])
-    os.mkdir(tempdir)
-    #create files
-    Global.createfile(name ='/'.join([tempdir,SUBMITSCRNAME.format(k)]),
-                      data =SUBMITSCR.format(v.execution_script_name, k,
-                                             JOBDONE),
-                      stats= Global.MyStats(st_mode=0o774))
-    for name, info in v.execution_script.items():
-        Global.createfile(name = '/'.join([tempdir,name]),
-                          data = info[1], stats = info[0])
-    for name, info in v.input_files.items():
-        Global.createfile(name='/'.join([tempdir, name]),
-                          data = info[1], stats = info[0])
-    for name, info in v.output_files.items():
-        Global.createfile(name='/'.join([tempdir, name]),
-                          data = info[1], stats = info[0])
-    #submit job
-    proc = psutil.Popen('/'.join([tempdir, SUBMITSCRNAME.format(k)]),
-                        stdout=subprocess.DEVNULL,
-                        stderr=subprocess.DEVNULL,
-                        start_new_session=True,
-                        cwd = tempdir)
-    #update queues
-    v.status_key = 'r'
-    proc.set_nice(MyConfigs.niceness)
-    MyQueue.update({k:v})
-    jobid2proc.update({k:proc})
-    #create job file to be loaded later, if necessary:
-    Global.createfile(name = '/'.join([tempdir,JOBFILE.format(proc.pid)]),
-                      data = repr(v))
+def get_new_jobs_and_submit(njobstoget):
 
-def update_jobs_running(njobsallowed):
-    # First I stop or continue the jobs in this clients
+    #If it still can run more jobs, I ask the server for new ones:
+    if (njobstoget > 0) and MyConfigs.MoreJobs:
+        ok, NewQueue = handle_request('GIME_JOBS',njobstoget)
+        if not ok: return
+        for k, v in NewQueue.items():
+            #create temporary directory
+            tempdir = '/'.join([TEMPFOLDER,FOLDERFORMAT.format(k)])
+            os.mkdir(tempdir)
+            #create files
+            Global.createfile(name ='/'.join([tempdir,SUBMITSCRNAME.format(k)]),
+                              data =SUBMITSCR.format(v.execution_script_name, k,
+                                                     JOBDONE),
+                              stats= Global.MyStats(st_mode=0o774))
+            for name, info in v.execution_script.items():
+                Global.createfile(name = '/'.join([tempdir,name]),
+                                  data = info[1], stats = info[0])
+            for name, info in v.input_files.items():
+                Global.createfile(name='/'.join([tempdir, name]),
+                                  data = info[1], stats = info[0])
+            for name, info in v.output_files.items():
+                Global.createfile(name='/'.join([tempdir, name]),
+                                  data = info[1], stats = info[0])
+            #submit job
+            proc = psutil.Popen('/'.join([tempdir, SUBMITSCRNAME.format(k)]),
+                                stdout=subprocess.DEVNULL,
+                                stderr=subprocess.DEVNULL,
+                                start_new_session=True,
+                                cwd = tempdir)
+            #update queues
+            v.status_key = 'r'
+            proc.set_nice(MyConfigs.niceness)
+            MyQueue.update({k:v})
+            jobid2proc.update({k:proc})
+            #create job file to be loaded later, if necessary:
+            Global.createfile(name = '/'.join([tempdir,JOBFILE.format(proc.pid)]),
+                              data = repr(v))
+
+def locally_manage_jobs(allowed = None): #returns njobstoget
+
+    # get the time consumed by the job so far
+    def get_time_process(proc):
+        try:
+            a = proc.get_cpu_times()
+            time = a.system+a.user
+            proc_list = proc.get_children()
+            for proc in proc_list:
+                time += get_time_process(proc)
+            return time
+        except psutil.NoSuchProcess:
+            return 0
+
+    # find out which jobs are finished
+    count = 0
+    for jobid, proc in jobid2proc.items():
+        folder = FOLDERFORMAT.format(jobid)
+        if proc.poll() is not None:
+            if os.path.isfile('/'.join([TEMPFOLDER,folder,JOBDONE])):
+                MyQueue[jobid].status_key = 'e'
+            else:
+                if MyQueue[jobid].status_key != 'q':
+                    MyQueue[jobid].status_key = 't'
+        else:
+            if proc.status in {'running','sleeping'}:
+                count +=1
+            a = get_time_process(proc)
+            a = str(datetime.timedelta(seconds=int(a)))
+            MyQueue[jobid].running_time = a
+    MyConfigs.running = count
+
+    #load data from finished and stopped jobs
+    for k, v in MyQueue.items():
+        if v.status_key in {'e', 't', 'q'}:
+            folder = '/'.join([TEMPFOLDER, FOLDERFORMAT.format(k)])
+            files = os.listdir(path=folder)
+            for file in set(files) - (v.input_files.keys() |
+                                      set([JOBDONE, SUBMITSCRNAME.format(k)])):
+                data = Global.load_file(os.path.join(folder,file))
+                v.output_files.update({file: data})
+            for file in v.input_files.keys(): # Reload the input_files
+                data = Global.load_file(os.path.join(folder,file))
+                v.input_files.update({file: data})
+            MyQueue.update({k:v})
+
+    #Get the number of jobs that can run in this client now:
+    agora = MyConfigs.last_contact
+    if allowed is None:
+        agora = datetime.datetime.now()
+        allowed = MyConfigs.Calendar.get((calendar.day_name[agora.weekday()],
+                                          agora.hour, agora.minute),
+                                         MyConfigs.defNumJobs)
+
+    # Stop or continue the jobs in this client
     i = 0
     CanChangeQueue = MyQueue.SelAttrVal(attr='status_key', value={'p','r'})
     for k, v in CanChangeQueue.items():
         try:
-            if i < njobsallowed:
+            if i < allowed:
                 os.killpg(jobid2proc[k].pid,signal.SIGCONT)
                 v.status_key = 'r'
                 i +=1
@@ -187,15 +246,18 @@ def update_jobs_running(njobsallowed):
             MyQueue.update({k:v})
         except ProcessLookupError:
             continue
+    njobstoget = allowed - i
 
-    #Then, if it still can run more jobs, I ask the server for new ones:
-    if (i < njobsallowed) and MyConfigs.MoreJobs:
-        ok, NewQueue = handle_request('GIME_JOBS',njobsallowed-i)
-        if ok:
-            for k, v in NewQueue.items():
-                submit_job(k,v)
+    #updated number of jobs in this client
+    MyConfigs.totalJobs = len(MyQueue)
 
-def get_and_deal_with_job_signals():
+    print('{0:19s}: NJPermtd={1:03d},  NJRecvd={1:03d},  NJRunning={2:03d}'.format(
+          agora.strftime('%Y/%m/%d %H:%M:%S'),MyConfigs.totalJobs, MyConfigs.running)
+    ))
+
+    return njobstoget if njobstoget > 0 else 0
+
+def get_and_deal_with_job_signals(): #returns NotMine
 
     # Get jobviews from server:
     ok, Queue2Deal = handle_request('STATUS_QUEUE', True)
@@ -243,52 +305,6 @@ def get_and_deal_with_job_signals():
             continue
     # Send jobs which are not in this client
     return NotMine
-
-def locally_update_jobs_status():
-
-    # get the time consumed by the job so far
-    def get_time_process(proc):
-        try:
-            a = proc.get_cpu_times()
-            time = a.system+a.user
-            proc_list = proc.get_children()
-            for proc in proc_list:
-                time += get_time_process(proc)
-            return time
-        except psutil.NoSuchProcess:
-            return 0
-
-    # finds out which jobs are finished
-    count = 0
-    for jobid, proc in jobid2proc.items():
-        folder = FOLDERFORMAT.format(jobid)
-        if proc.poll() is not None:
-            if os.path.isfile('/'.join([TEMPFOLDER,folder,JOBDONE])):
-                MyQueue[jobid].status_key = 'e'
-            else:
-                if MyQueue[jobid].status_key != 'q':
-                    MyQueue[jobid].status_key = 't'
-        else:
-            if proc.status in {'running','sleeping'}:
-                count +=1
-            a = get_time_process(proc)
-            a = str(datetime.timedelta(seconds=int(a)))
-            MyQueue[jobid].running_time = a
-    MyConfigs.running = count
-
-    #load data from finished and stopped jobs
-    for k, v in MyQueue.items():
-        if v.status_key in {'e', 't', 'q'}:
-            folder = '/'.join([TEMPFOLDER, FOLDERFORMAT.format(k)])
-            files = os.listdir(path=folder)
-            for file in set(files) - (v.input_files.keys() |
-                                      set([JOBDONE, SUBMITSCRNAME.format(k)])):
-                data = Global.load_file(os.path.join(folder,file))
-                v.output_files.update({file: data})
-            for file in v.input_files.keys(): # Reload the input_files
-                data = Global.load_file(os.path.join(folder,file))
-                v.input_files.update({file: data})
-            MyQueue.update({k:v})
 
 def update_jobs_on_server_and_remove_finished_jobs(Queue2Send):
     for k, v in MyQueue.items():
@@ -344,19 +360,21 @@ def get_results_from_server_and_save():
 def main():
 
     load_jobs_from_last_run()
-    locally_update_jobs_status()
+    locally_manage_jobs()
 
     while True:
         # Get configuration from server and deal with it
         njobsallowed = get_and_deal_with_configs()
 
-        update_jobs_running(njobsallowed)
+        njobstoget = locally_manage_jobs(allowed=njobsallowed)
+        get_new_jobs_and_submit(njobstoget)
 
         time.sleep(WAIT_TIME)
-        
+
         #Returns jobviews of the jobs this client doesn't have:
         Queue2Send = get_and_deal_with_job_signals()
-        locally_update_jobs_status()
+        locally_manage_jobs(allowed=njobsallowed)
+
         #Only send the complete jobs if needed, otherwise send jobviews
         update_jobs_on_server_and_remove_finished_jobs(Queue2Send)
 
