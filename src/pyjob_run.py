@@ -63,6 +63,10 @@ def pause():
     time.sleep(2*WAIT_TIME)
 
 
+MyQueue = Global.JobQueue()
+jobid2proc = dict()
+MyConfigs = Global.Configs()
+
 
 def load_jobs_from_last_run():
     ''' Check if there are jobs running from last call of the script.
@@ -336,10 +340,6 @@ def get_results_from_server_and_save():
                               stats = Global.MyStats(st_mode=0o774))
 
 
-
-MyQueue = Global.JobQueue()
-jobid2proc = dict()
-MyConfigs = Global.Configs()
 
 def main():
 
