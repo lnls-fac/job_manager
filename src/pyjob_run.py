@@ -252,8 +252,7 @@ def locally_manage_jobs(allowed = None): #returns njobstoget
     MyConfigs.totalJobs = len(MyQueue)
 
     print('{0:19s}: NJPermtd={1:03d},  NJRecvd={1:03d},  NJRunning={2:03d}'.format(
-          agora.strftime('%Y/%m/%d %H:%M:%S'),MyConfigs.totalJobs, MyConfigs.running)
-    ))
+          agora.strftime('%Y/%m/%d %H:%M:%S'),MyConfigs.totalJobs, MyConfigs.running))
 
     return njobstoget if njobstoget > 0 else 0
 
