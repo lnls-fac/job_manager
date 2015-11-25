@@ -35,7 +35,7 @@ def main():
                       help="If this option is given, the calendar of the "
                       "clients will be set according the following options"
                       " to the (W,H,M) specifications for the number of "
-                      "processes to run. [Possible values: " 
+                      "processes to run. [Possible values: "
                       "'append', 'set' and 'empty']   [default: 'append']")
     group.add_option('-W','--weekday',dest='week',type='str',
                       help=("list of week days to set the calendar. "
@@ -50,10 +50,10 @@ def main():
                       help=("Integer which specify the number of processes to "
                             "set to the calendar) [no Default Value]"))
     parser.add_option_group(group)
-    
-        
+
+
     (opts, _) = parser.parse_args()
- 
+
     try:
         if opts.clients == 'all':
             clients = opts.clients
@@ -69,55 +69,57 @@ def main():
     except Global.MatchClientsErr as err:
         print(err)
         return
-    
+
     RmClie = {}
     if opts.remove:
         RmClie = set(ConfigsReceived.keys())
-     
+
     calendars = {}
     if opts.calendar in {'append','set','empty'}:
         if opts.np is None and opts.calendar != 'empty':
             print('Calendar not submitted: must specify -N or --num_proc option')
-            return 
+            return
         else:
             np = opts.np
-    
+
         if opts.week is not None:
             week = opts.week.split(',')
-            days = tuple(x for x in calendar.day_name for y in week 
+            days = tuple(x for x in calendar.day_name for y in week
                                     if x.lower().startswith(y.lower()))
             if len(days) != len(week):
                 print("Problem with at least one week day specified")
                 return
         else:
             days = (calendar.day_name[datetime.datetime.now().weekday()],)
-        
+
         IH, IM = 0, 0
+        initial = None
         if (opts.initial is not None):
             initial = tuple(int(x) for x in opts.initial.split(':'))
-            if len(initial) != 2 or  not ((-1 < initial[0] < 24) and 
+            if len(initial) != 2 or  not ((-1 < initial[0] < 24) and
                                           (-1 < initial[1] < 60)):
                 print("Problem with specification of initial time")
                 return
             IH, IM = initial
-            
+
         FH, FM = 23, 59
+        final = None
         if (opts.final is not None):
             final = tuple(int(x) for x in opts.final.split(':'))
-            if len(final) != 2 or not ((-1 < final[0] < 24) and 
+            if len(final) != 2 or not ((-1 < final[0] < 24) and
                                        (-1 < final[1] < 60)     ):
                 print("Problem with specification of final time")
                 return
             FH, FM = final
-         
-        if initial > final:
+
+        if ((initial is not None) and (final is not None)) and (initial > final):
              print('Initial time must be smaller than the final.')
-             return   
-        interval = tuple((H,M) for H in range(IH,FH+1) 
-                         for M in range(0,60) 
-                         if (IH,IM) <= (H,M) <= (FH,FM))    
-        
-        
+             return
+        interval = tuple((H,M) for H in range(IH,FH+1)
+                         for M in range(0,60)
+                         if (IH,IM) <= (H,M) <= (FH,FM))
+
+
         calendars = {(x,y,z): np for x in days for (y,z) in interval}
     else:
         if opts.calendar is not None:
@@ -126,7 +128,7 @@ def main():
         if any((opts.initial, opts.final, opts.week)):
             print("Option --calendar must be given to set the calendar")
             return
-    
+
     for k in ConfigsReceived.keys():
         if opts.calendar == 'append':
             ConfigsReceived[k].Calendar.update(calendars)
@@ -134,14 +136,14 @@ def main():
             ConfigsReceived[k].Calendar = calendars
         elif opts.calendar == 'empty':
             ConfigsReceived[k].Calendar = dict()
-    
-    
+
+
     if opts.niceness is not None:
-        niceness = (-20 if -20 > opts.niceness else 
+        niceness = (-20 if -20 > opts.niceness else
                      20 if  20 < opts.niceness else opts.niceness )
         for k in ConfigsReceived.keys():
             ConfigsReceived[k].niceness = niceness
-    
+
     if opts.shut is not None:
         if not opts.shut:
             print('Option -s must be True or False')
@@ -153,7 +155,7 @@ def main():
             return
         for k in ConfigsReceived.keys():
             ConfigsReceived[k].shutdown = shut
-        
+
     if opts.More is not None:
         if not opts.More:
             print('Option -s must be True or False')
@@ -165,23 +167,23 @@ def main():
             return
         for k in ConfigsReceived.keys():
             ConfigsReceived[k].MoreJobs = More
-        
-        
+
+
     if opts.defproc is not None:
         defproc = opts.defproc
         for k in ConfigsReceived.keys():
             ConfigsReceived[k].defNumJobs = defproc
-    
-    
+
+
     ok, clients = Global.handle_request('SET_CONFIGS',ConfigsReceived, RmClie)
     if ok:
-        print('Success. Configurations will be set! for \n', 
+        print('Success. Configurations will be set! for \n',
               ', '.join(tuple(ConfigsReceived)))
     else:
         print("It seems that these clients are not in the server's list;",
               ', '.join(clients))
-        
-        
-        
+
+
+
 if __name__ == '__main__':
     main()
