@@ -98,6 +98,7 @@ class RequestHandler(socketserver.StreamRequestHandler):
             job.creation_date = datetime.datetime.now()
             job.hostname = clientName
             cls.Queue.update({jobid : job})
+        save_id()
         return (True, jobid)
 
     def send_results_to_host(self):
@@ -282,7 +283,25 @@ def load_existing_Configs():
     data = Global.load_file(name=name, ignore = True)
     if data and data[1]: return eval(data[1])
 
-def save():
+def save_Configs():
+    if not os.path.isdir(CONFIGFOLDER):
+        os.mkdir(path=CONFIGFOLDER)
+    configname = os.path.join(CONFIGFOLDER,CONFIGS_FILENAME)
+    Global.createfile(name=configname, data=repr(RequestHandler.Configs))
+
+def save_Queue():
+    if not os.path.isdir(CONFIGFOLDER):
+        os.mkdir(path=CONFIGFOLDER)
+    queuename   = os.path.join(CONFIGFOLDER,QUEUE_FILENAME)
+    Global.createfile(name=queuename, data=repr(RequestHandler.Queue))
+
+def save_id():
+    if not os.path.isdir(CONFIGFOLDER):
+        os.mkdir(path=CONFIGFOLDER)
+    idgenname   = os.path.join(CONFIGFOLDER,IDGEN_FILENAME)
+    Global.createfile(name=idgenname, data=repr(RequestHandler.IdGen))
+
+def save_all():
     if not os.path.isdir(CONFIGFOLDER):
         os.mkdir(path=CONFIGFOLDER)
     idgenname   = os.path.join(CONFIGFOLDER,IDGEN_FILENAME)
@@ -293,7 +312,7 @@ def save():
     Global.createfile(name=configname, data=repr(RequestHandler.Configs))
 
 def signal_handler(signal, frame):
-    save()
+    save_all()
     sys.exit()
 
 def main():
@@ -309,7 +328,7 @@ def main():
     finally:
         if server is not None:
             server.shutdown()
-        save()
+        save_all()
 
 if __name__ == '__main__':
     signal.signal(signal.SIGTERM, signal_handler)
