@@ -41,6 +41,8 @@ def main():
                       "running_time,description']. It is not needed to give "
                       "the whole property name, only a fraction of it is enough."
                       "Possible Values:\n" + ', '.join(list(PROPERTIES.keys())))
+    parser.add_option('--summary',dest='summary',action='store_true',
+                      help='Show a summary of the queue.',default=False)
 
     (opts, _) = parser.parse_args()
 
@@ -65,6 +67,15 @@ def main():
         Queue = Global.job_selection_parse(opts)
     except Global.JobSelParseErr as err:
         print(err)
+        return
+
+    if opts.summary and Queue:
+        print('STATUS  NJOBS')
+        for status in sorted(list(STATUS.keys())):
+            SelQueue = Queue.SelAttrVal(attr='status_key', value={status})
+            if SelQueue:
+                print('{0:^6s} {1:^5d}'.format(status,len(SelQueue)))
+        print('TOTAL ={0:^5d}'.format(len(Queue)))
         return
 
     choose = 'prior,status,user,runninghost,running_time,description'
