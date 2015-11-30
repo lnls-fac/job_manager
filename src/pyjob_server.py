@@ -159,6 +159,10 @@ class RequestHandler(socketserver.StreamRequestHandler):
                 elif isinstance(v,Global.JobView):
                     if k in self.Queue:
                         self.Queue[k].update(v)# jobview
+                    else:
+                        jo = Global.Jobs() # turn JobView in a Jobs object
+                        jo.update(v)
+                        self.Queue.update({k:jo})
                 else:
                     self.Queue.update({k:v})# not a jobview
 
