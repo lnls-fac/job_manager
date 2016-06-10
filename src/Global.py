@@ -288,7 +288,7 @@ class Configs:
         self.defNumJobs = defNumJobs
         self.Calendar =  Calendar
         self.active = active
-        self.numcpus = numcpus or psutil.NUM_CPUS
+        self.numcpus = numcpus or psutil.cpu_count()
         self.last_contact = last_contact
         self.running = running
         self.totalJobs = totalJobs
@@ -301,7 +301,7 @@ class MimicsPsutilPopen(psutil.Process):
         try:
             super().__init__(pid)
             self.__returncode = None
-        except psutil._error.NoSuchProcess:
+        except psutil.NoSuchProcess:
             self.__returncode = signal.SIGTERM
 
     @property
@@ -309,7 +309,7 @@ class MimicsPsutilPopen(psutil.Process):
         return self.__returncode
 
     def poll(self):
-        if self.is_running() and self.status != 'zombie':
+        if self.is_running() and self.status() != psutil.STATUS_ZOMBIE:
             self.__returncode = None
         else:
             self.__returncode = signal.SIGTERM

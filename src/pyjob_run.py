@@ -92,13 +92,13 @@ def load_jobs_from_last_run():
             state = proc.poll()
             folder = FOLDERFORMAT.format(jobid)
             if (state is not None or
-               proc.name not in '/'.join([folder,SUBMITSCRNAME.format(jobid)])):
+               proc.name() not in '/'.join([folder,SUBMITSCRNAME.format(jobid)])):
                 if os.path.isfile('/'.join([TEMPFOLDER,folder,JOBDONE])):
                     job.status_key = 'e'
                 else:
                     job.status_key = 't'
             else:
-                if proc.status == 'stopped':
+                if proc.status() == psutil.STATUS_STOPPED:
                     job.status_key = 'p'
             jobid2proc.update({jobid : proc})
             MyQueue.update({jobid : job})
@@ -108,11 +108,11 @@ def get_and_deal_with_configs():
     # set nice of the job and its children
     def set_nice_process(proc):
         try:
-            if proc.get_nice() < MyConfigs.niceness:
-                proc.set_nice(MyConfigs.niceness)
-            proc_list = proc.get_children()
-            for proc in proc_list:
-                set_nice_process(proc)
+            if proc.nice() < MyConfigs.niceness:
+                proc.nice(MyConfigs.niceness)
+            proc_list = proc.children(recursive=True)
+            for pr in proc_list:
+                pr.nice(MyConfigs.niceness)
         except psutil.NoSuchProcess:
             return
 
@@ -170,7 +170,7 @@ def get_new_jobs_and_submit(njobstoget):
                                 cwd = tempdir)
             #update queues
             v.status_key = 'r'
-            proc.set_nice(MyConfigs.niceness)
+            proc.nice(MyConfigs.niceness)
             MyQueue.update({k:v})
             jobid2proc.update({k:proc})
             #create job file to be loaded later, if necessary:
@@ -178,18 +178,6 @@ def get_new_jobs_and_submit(njobstoget):
                               data = repr(v))
 
 def locally_manage_jobs(allowed = None): #returns njobstoget
-
-    # get the time consumed by the job so far
-    def get_time_process(proc):
-        try:
-            a = proc.get_cpu_times()
-            time = a.system+a.user
-            proc_list = proc.get_children()
-            for proc in proc_list:
-                time += get_time_process(proc)
-            return time
-        except psutil.NoSuchProcess:
-            return 0
 
     # find out which jobs are finished
     count = 0
@@ -202,9 +190,10 @@ def locally_manage_jobs(allowed = None): #returns njobstoget
                 if MyQueue[jobid].status_key != 'q':
                     MyQueue[jobid].status_key = 't'
         else:
-            if proc.status in {'running','sleeping'}:
+            if proc.status() in {psu.STATUS_RUNNING,psu.STATUS_SLEEPING}:
                 count +=1
-            a = get_time_process(proc)
+            a = proc.cpu_times()
+            a = a.system + a.user + a.children_user + children_system
             a = str(datetime.timedelta(seconds=int(a)))
             MyQueue[jobid].running_time = a
     MyConfigs.running = count
@@ -383,16 +372,18 @@ def main():
 if __name__ == '__main__':
     signal.signal(signal.SIGTERM, signal_handler)
     signal.signal(signal.SIGUSR1, signal_handler)
-    proclist = psutil.get_process_list()
     mod_name = os.path.split(__file__)[1]
     mypid = os.getpid()
-    for proc in proclist:
+    for pr in psutil.process_iter():
         try:
-            for cmdline in proc.cmdline:
-                if mod_name in cmdline and proc.pid != mypid:
+            cmdline = pr.cmdline()
+            pid = pr.pid
+        except psutil.NoSuchProcess:
+            pass
+        else:
+            for cmdl in cmdline:
+                if mod_name in cmdl and pid != mypid:
                     print('There is already one instance of {0}'
                           ' running on this computer: exiting'.format(mod_name))
                     sys.exit(1)
-        except psutil._error.NoSuchProcess:
-            continue
     main()
