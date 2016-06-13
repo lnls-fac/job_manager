@@ -182,9 +182,9 @@ def locally_manage_jobs(allowed = None): #returns njobstoget
     # get the time consumed by the job so far
     def get_time_process(proc):
         try:
-            a = proc.get_cpu_times()
+            a = proc.cpu_times()
             time = a.system+a.user
-            proc_list = proc.get_children()
+            proc_list = proc.children()
             for proc in proc_list:
                 time += get_time_process(proc)
             return time
