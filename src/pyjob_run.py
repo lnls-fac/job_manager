@@ -179,6 +179,18 @@ def get_new_jobs_and_submit(njobstoget):
 
 def locally_manage_jobs(allowed = None): #returns njobstoget
 
+    # get the time consumed by the job so far
+    def get_time_process(proc):
+        try:
+            a = proc.get_cpu_times()
+            time = a.system+a.user
+            proc_list = proc.get_children()
+            for proc in proc_list:
+                time += get_time_process(proc)
+            return time
+        except psutil.NoSuchProcess:
+            return 0
+
     # find out which jobs are finished
     count = 0
     for jobid, proc in jobid2proc.items():
@@ -192,8 +204,7 @@ def locally_manage_jobs(allowed = None): #returns njobstoget
         else:
             if proc.status() in {psutil.STATUS_RUNNING,psutil.STATUS_SLEEPING}:
                 count +=1
-            a = proc.cpu_times()
-            a = a.system + a.user + a.children_user + a.children_system
+            a = get_time_process(proc)
             a = str(datetime.timedelta(seconds=int(a)))
             MyQueue[jobid].running_time = a
     MyConfigs.running = count
