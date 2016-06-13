@@ -193,7 +193,7 @@ def locally_manage_jobs(allowed = None): #returns njobstoget
             if proc.status() in {psutil.STATUS_RUNNING,psutil.STATUS_SLEEPING}:
                 count +=1
             a = proc.cpu_times()
-            a = a.system + a.user + a.children_user + children_system
+            a = a.system + a.user + a.children_user + a.children_system
             a = str(datetime.timedelta(seconds=int(a)))
             MyQueue[jobid].running_time = a
     MyConfigs.running = count
