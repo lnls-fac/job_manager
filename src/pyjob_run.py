@@ -190,7 +190,7 @@ def locally_manage_jobs(allowed = None): #returns njobstoget
                 if MyQueue[jobid].status_key != 'q':
                     MyQueue[jobid].status_key = 't'
         else:
-            if proc.status() in {psu.STATUS_RUNNING,psu.STATUS_SLEEPING}:
+            if proc.status() in {psutil.STATUS_RUNNING,psutil.STATUS_SLEEPING}:
                 count +=1
             a = proc.cpu_times()
             a = a.system + a.user + a.children_user + children_system
