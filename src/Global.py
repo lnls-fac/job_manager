@@ -399,6 +399,9 @@ def job_selection_parse_options(parser):
     parser.add_option('-u','--user',dest='user',type='str',
                      help="Select the jobs by their user. "
                      "[format: user1,user2,...  default: 'all']")
+    parser.add_option('-r','--runninghost',dest='rhost',type='str',
+                     help="Select the jobs by their Running Host. "
+                     "[format: host1,host2,...  default: 'all']")
     parser.add_option('-d','--description',dest='descr',type='str',
                      help="Select the jobs by a segment of their description.")
     return parser
@@ -423,7 +426,7 @@ def job_selection_parse(opts):
         nonexistent_jobs = list(jobs - set(Queue.keys()))
         if nonexistent_jobs:
             raise JobSelParseErr('These jobs do not exist:' +
-                                  ' '.join(nonexistent_jobs))
+                                  ' '.join([str(x) for x in nonexistent_jobs]))
         Queue = JobQueue({k:v for k,v in Queue.items() if k in jobs})
 
     if opts.status is not None:
@@ -438,6 +441,11 @@ def job_selection_parse(opts):
     if opts.user is not None:
         user = set(opts.user.split(','))
         Queue = Queue.SelAttrVal(attr='user',value=user)
+
+    if opts.rhost is not None:
+        rhost = set(opts.rhost.split(','))
+        rhost = set(match_clients(rhost).keys())
+        Queue = Queue.SelAttrVal(attr='runninghost',value=rhost)
 
     if opts.descr is not None:
         Queue = Queue.SelAttrVal(attr='description',value=opts.descr)
