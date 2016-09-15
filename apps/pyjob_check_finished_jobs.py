@@ -2,6 +2,7 @@
 
 import os
 import subprocess
+import argparse
 
 def find_rms_dirs(dirpath):
     dirs = [x for x in os.walk(dirpath)];
@@ -37,60 +38,74 @@ def get_running_jobs_descr():
         running_jobs_descr[job[0]] = " ".join(job[1:])
     return running_jobs_descr
 
-ma_finished  = []; ex_finished  = []; xy_finished  = []
-ma_running   = []; ex_running   = []; xy_running   = []
-ma_not_found = []; ex_not_found = []; xy_not_found = []
+def main():
+    parser = argparse.ArgumentParser(description="Check finished jobs in rms directories")
+    parser.add_argument("-d", "--directory", type=str, help="search directory")
+    args = parser.parse_args()
 
-par_dir, rms_dirs = find_rms_dirs(os.getcwd())
+    curdir = os.getcwd()
+    if args.directory:
+        os.chdir(args.directory)
 
-if par_dir is not None and rms_dirs is not None:
-    running_jobs_dir = get_running_jobs_dir()
-    running_jobs_descr = get_running_jobs_descr()
+    ma_finished  = []; ex_finished  = []; xy_finished  = []
+    ma_running   = []; ex_running   = []; xy_running   = []
+    ma_not_found = []; ex_not_found = []; xy_not_found = []
 
-    for d in rms_dirs:
-        rms = d.split(os.sep)[-1]
-        files = os.listdir(d)
-        job_ids = []
-        if any(d in job_dir for job_dir in running_jobs_dir.keys()):
-            job_ids = running_jobs_dir[d]
+    par_dir, rms_dirs = find_rms_dirs(os.getcwd())
 
-        if 'dynap_ma_out.txt' in files:
-            ma_finished.append(rms)
-        elif len(job_ids)!= 0 and any('MA:' in running_jobs_descr[job_id].upper() for job_id in job_ids):
-            ma_running.append(rms)
-        else:
-            ma_not_found.append(rms)
+    if par_dir is not None and rms_dirs is not None:
+        running_jobs_dir = get_running_jobs_dir()
+        running_jobs_descr = get_running_jobs_descr()
 
-        if 'dynap_ex_out.txt' in files:
-            ex_finished.append(rms)
-        elif len(job_ids)!= 0 and any('EX:' in running_jobs_descr[job_id].upper() for job_id in job_ids):
-            ex_running.append(rms)
-        else:
-            ex_not_found.append(rms)
+        for d in rms_dirs:
+            rms = d.split(os.sep)[-1]
+            files = os.listdir(d)
+            job_ids = []
+            if any(d in job_dir for job_dir in running_jobs_dir.keys()):
+                job_ids = running_jobs_dir[d]
 
-        if 'dynap_xy_out.txt' in files:
-            xy_finished.append(rms)
-        elif len(job_ids)!= 0 and any('XY:' in running_jobs_descr[job_id].upper() for job_id in job_ids):
-            xy_running.append(rms)
-        else:
-            xy_not_found.append(rms)
+            if 'dynap_ma_out.txt' in files:
+                ma_finished.append(rms)
+            elif len(job_ids)!= 0 and any('MA:' in running_jobs_descr[job_id].upper() for job_id in job_ids):
+                ma_running.append(rms)
+            else:
+                ma_not_found.append(rms)
 
-    print("\nDynamic aperture results found in :", par_dir)
+            if 'dynap_ex_out.txt' in files:
+                ex_finished.append(rms)
+            elif len(job_ids)!= 0 and any('EX:' in running_jobs_descr[job_id].upper() for job_id in job_ids):
+                ex_running.append(rms)
+            else:
+                ex_not_found.append(rms)
 
-    print("\nFinished jobs:")
-    print("xy: ", sorted(xy_finished))
-    print("ex: ", sorted(ex_finished))
-    print("ma: ", sorted(ma_finished))
+            if 'dynap_xy_out.txt' in files:
+                xy_finished.append(rms)
+            elif len(job_ids)!= 0 and any('XY:' in running_jobs_descr[job_id].upper() for job_id in job_ids):
+                xy_running.append(rms)
+            else:
+                xy_not_found.append(rms)
 
-    print("\nRunning jobs:")
-    print("xy: ", sorted(xy_running))
-    print("ex: ", sorted(ex_running))
-    print("ma: ", sorted(ma_running))
+        print("\nDynamic aperture results found in :", par_dir)
 
-    print("\nNot found:")
-    print("xy: ", sorted(xy_not_found))
-    print("ex: ", sorted(ex_not_found))
-    print("ma: ", sorted(ma_not_found), "\n")
+        print("\nFinished jobs:")
+        print("xy: ", sorted(xy_finished))
+        print("ex: ", sorted(ex_finished))
+        print("ma: ", sorted(ma_finished))
 
-else:
-    print("\nDynamic aperture results not found in :", os.getcwd(), "\n")
+        print("\nRunning jobs:")
+        print("xy: ", sorted(xy_running))
+        print("ex: ", sorted(ex_running))
+        print("ma: ", sorted(ma_running))
+
+        print("\nNot found:")
+        print("xy: ", sorted(xy_not_found))
+        print("ex: ", sorted(ex_not_found))
+        print("ma: ", sorted(ma_not_found), "\n")
+
+    else:
+        print("\nDynamic aperture results not found in :", os.getcwd(), "\n")
+
+    os.chdir(curdir)
+
+if __name__ == '__main__':
+    main()
