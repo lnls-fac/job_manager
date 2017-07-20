@@ -1,12 +1,9 @@
 [Unit]
 Description=Local client to run jobs for the JobManager server
-After=network.target
+After=multi-user.target
 
 [Service]
 Group=fac
 User=fac
 Type=oneshot
 ExecStart=/home/fac_files/lnls-fac/job_manager/src/pyjob_run.py
-
-[Install]
-WantedBy=multi-user.target

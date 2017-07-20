@@ -1,12 +1,9 @@
 [Unit]
 Description=Server of the JobManager
-After=network.target
+After=multi-user.target
 
 [Service]
 Group=fac
 User=fac
 Type=oneshot
 ExecStart=/home/fac_files/lnls-fac/job_manager/src/pyjob_server.py
-
-[Install]
-WantedBy=multi-user.target
