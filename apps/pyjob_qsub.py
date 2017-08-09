@@ -1,4 +1,4 @@
-#!/usr/bin/env python3
+#!/usr/bin/env python-sirius
 
 import optparse
 import os
@@ -8,7 +8,7 @@ from builtins import isinstance
 def main():
     # Begin the creation of the job
     job = Global.Jobs()
-    
+
     # configuration of the parser for the arguments
     parser = optparse.OptionParser()
     parser.add_option('-d','--description',dest='description',type='str',
@@ -32,15 +32,15 @@ def main():
                      help="Set the list of possible hosts to run the"
                      "jobs [format: append=host1,host2,... or set=host1,host2"
                      ",... default = 'all'. " + Global.MATCH_RULE)
-    
+
     parser.set_description(description='This command submit one job to the '
                            ' queue.')
     (opts, _) = parser.parse_args()
-        
+
     # Load execution script
     if opts.exec_script_name is None:
         print('Job not submitted: must specify -e or --exec option')
-        return 
+        return
     else:
         data = Global.load_file(opts.exec_script_name)
         if data is not None:
@@ -52,19 +52,19 @@ def main():
     #Load name
     if opts.description is not None:
         job.description = opts.description
-    
+
     #Load working_dir
     if opts.work_dir is not None:
         job.working_dir = os.path.abspath(opts.work_dir)
-    
+
     #Load priority
     if opts.prior is not None:
         if isinstance(opts.prior, int):
             job.priority = int(float(opts.prior))
         else:
             print('Could not set the priority. Using default')
-    
-    
+
+
     hosts = 'all'
     if opts.hosts is not None:
         if opts.hosts != 'all':
@@ -74,9 +74,9 @@ def main():
             except Global.MatchClientsErr as err:
                 print(err)
                 return
-            
+
     job.possiblehosts = hosts
-    
+
     if opts.input_file_names is not None:
         input_file_names = opts.input_file_names.split(',')
         for name in input_file_names:
@@ -87,12 +87,12 @@ def main():
             else:
                 print('Error loading Files')
                 return
-    
+
     ok, data = Global.handle_request('NEW_JOB',job)
-    
+
     if ok:
         print('Success. Job id is :', data)
-    
-    
-    
+
+
+
 main()

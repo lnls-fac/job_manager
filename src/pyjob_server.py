@@ -1,6 +1,6 @@
-#!/usr/bin/env python3
+#!/usr/bin/env python-sirius
 
-#import remote_machine
+# import remote_machine
 import datetime
 import socketserver
 import struct

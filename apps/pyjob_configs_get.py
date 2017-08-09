@@ -1,4 +1,4 @@
-#!/usr/bin/env python3
+#!/usr/bin/env python-sirius
 
 import optparse
 import calendar
@@ -14,7 +14,7 @@ def main():
     parser.add_option('--showCalendar',dest='sCal',action='store_true',
                       help="Show the calendar of each client", default=False)
     (opts, _) = parser.parse_args()
-    
+
     try:
         if opts.clients == 'all' or opts.clients is None:
             clients = opts.clients
@@ -28,7 +28,7 @@ def main():
     except Global.MatchClientsErr as err:
         print(err)
         return
-  
+
     if opts.sCal:
         sortCal = lambda x:(getattr(calendar,x[0][0].upper()),x[0][1],x[0][2])
         sorTab = lambda x:getattr(calendar,x[0].upper())
@@ -51,7 +51,7 @@ def main():
                     previous = vl
                     lastday = kl[0]
             print(k)
-            lasttime = dict() 
+            lasttime = dict()
             for kl in sorted(conj, key=lambda x:x):
                 nums = ''
                 for day, dados in sorted(table.items(), key=sorTab):
@@ -60,12 +60,12 @@ def main():
                         vl = dados.get(lasttime[day])
                     else:
                         lasttime[day] = kl
-                    
+
                     nums += '{:^10d}'.format(vl)
                 print('{:^17s}{:s}'.format('{0:02d}:{1:02d}'
-                                           .format(kl[0], kl[1]),nums))  
+                                           .format(kl[0], kl[1]),nums))
         return
-    
+
     print('='*78)
     print('{:17s}{:^7s}{:^7s}{:^10s}{:^10s}{:^10s}{:^11s}{:^6s}'
           .format('hostname','State', 'NCPUs','NJPermtd','NJRecvd',
@@ -78,7 +78,7 @@ def main():
                                   agora.hour, agora.minute), v.defNumJobs)
         print('{key:17s}{val.active!s:^7s}{val.numcpus:^7d}{N:^10d}'
               '{val.totalJobs:^10d}{val.running:^10d}{acc:^11}'
-              '{val.niceness:^6d}'.format(key=k,val=v,N=NumJobs, 
+              '{val.niceness:^6d}'.format(key=k,val=v,N=NumJobs,
                                           acc='yes' if v.MoreJobs else 'no'))
         TNCPUs += v.numcpus
         TNAllow += NumJobs
@@ -87,8 +87,7 @@ def main():
     print('='*78)
     print('{0:17s}{1:^7s}{2:^7d}{3:^10d}{4:^10d}{5:^10d}{1:^10s}{1:^6s}'
           .format('Total',' ',TNCPUs, TNAllow, TJThere, TJRun))
-        
-        
+
+
 if __name__ == '__main__':
     main()
-

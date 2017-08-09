@@ -1,4 +1,4 @@
-#!/usr/bin/env python3
+#!/usr/bin/env python-sirius
 
 import optparse
 import Global
@@ -11,7 +11,7 @@ def main():
     parser.add_option_group(group)
     group = optparse.OptionGroup(parser, "Signals Options")
     group.add_option('-S', '--signal', dest='signal', type='str',
-                     help="Send signal to jobs. Options are: kill, pause, " 
+                     help="Send signal to jobs. Options are: kill, pause, "
                      "continue and queue. The last signal brings back the jobs "
                      "to the queue. If they have begun to run"
                       " the outputs generated so far will be loaded.")
@@ -22,17 +22,17 @@ def main():
                      "jobs [format: append=host1,host2,... or set=host1,host2"
                      ",..." + Global.MATCH_RULE)
     parser.add_option_group(group)
-    
+
     parser.set_description(description='This command send signals to specific '
                            'jobs and allows you to change the possibleHosts '
                            'and priority.')
-    
+
     (opts, _) = parser.parse_args()
-    
+
     if not any((opts.jobs,opts.status,opts.user,opts.descr)):
         print('At least one Job Selection Option must be given')
         return
-    
+
     try:
         Queue = Global.job_selection_parse(opts)
     except Global.JobSelParseErr as err:
@@ -56,10 +56,10 @@ def main():
             if signals[opts.signal] in {'ru','qu'} and v.status_key == 'q':
                 continue
             Queue[k].status_key = signals[opts.signal.lower()]
-    
+
     if opts.hosts is not None:
         action = opts.hosts.split('=')
-        if len(action) != 2: 
+        if len(action) != 2:
             print('Wrong -H assignment.')
             return
         if action[1] != 'all':
@@ -85,13 +85,13 @@ def main():
                 print('Wrong -H assignment.')
                 return
             Queue.update({k:v})
-    
+
     if opts.priority is not None:
         for k,v in Queue.items():
             v.priority = opts.priority
             Queue.update({k:v})
 
-        
+
     ok, data1, data2 = Global.handle_request('CHANGE_JOBS_REQUEST',Queue)
 
     if ok:
@@ -103,6 +103,6 @@ def main():
         if left:
             print('These jobs could not be changed :', ' '.join(left))
 
-    
+
 if __name__ == '__main__':
     main()
