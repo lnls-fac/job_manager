@@ -259,8 +259,9 @@ def locally_manage_jobs(allowed=None):  # returns njobstoget
     # updated number of jobs in this client
     MyConfigs.totalJobs = len(MyQueue)
 
-    NumJobs = v.Calendar.get((calendar.day_name[agora.weekday()],
-                              agora.hour, agora.minute), v.defNumJobs)
+    NumJobs = MyConfigs.Calendar.get(
+        (calendar.day_name[agora.weekday()], agora.hour, agora.minute),
+        MyConfigs.defNumJobs)
     print('{0:19s}: NJPermtd={1:03d}, '.format(
             agora.strftime('%Y/%m/%d %H:%M:%S'), MyConfigs.totalJobs) +
           'NJRecvd={0:03d},  NJRunning={1:03d}'.format(NumJobs,
