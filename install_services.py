@@ -39,5 +39,5 @@ with open('/etc/lsb-release','r') as f:
 
 version = data[1].split('=')[1][:-1]
 install_pyjob_run(version)
-if socket.gethostname() == "lnls82-linux":
+if socket.gethostname() == "lnls350-linux":
     install_pyjob_server(version)
