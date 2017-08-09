@@ -12,7 +12,7 @@ import psutil
 import datetime
 
 # Address = ('fernando-linux', 8804)
-Address = ('lnls82-linux', 8804)
+Address = ('lnls350-linux', 8804)
 VERSION = '0.0.0'.encode('utf-8')
 MAX_BLOCK_LEN = 1024*4
 WAIT_TIME = 10  # in seconds

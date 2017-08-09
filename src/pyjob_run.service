@@ -5,5 +5,9 @@ After=multi-user.target
 [Service]
 Group=fac
 User=fac
-Type=oneshot
+Type=simple
+StandardOutput=syslog
+StandardError=syslog
+ExecStartPre=/bin/bash --login -c 'env > /tmp/.magic-environment-file'
+EnvironmentFile=-/tmp/.magic-environment-file
 ExecStart=/home/fac_files/lnls-fac/job_manager/src/pyjob_run.py
