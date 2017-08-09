@@ -232,7 +232,7 @@ def locally_manage_jobs(allowed=None):  # returns njobstoget
             MyQueue.update({k: v})
 
     # Get the number of jobs that can run in this client now:
-    agora = MyConfigs.last_contact
+    agora = MyConfigs.last_contact or datetime.datetime.now()
     if allowed is None:
         agora = datetime.datetime.now()
         allowed = MyConfigs.Calendar.get((calendar.day_name[agora.weekday()],
