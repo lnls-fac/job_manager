@@ -78,6 +78,7 @@ def main():
     agora = datetime.datetime.now()
     TNCPUs, TNAllow, TJThere, TJRun = 0, 0, 0, 0
     for k, v in sorted(ConfigsReceived.items(), key=lambda x: x[0]):
+        k = k.replace('.abtlus.org.br', '')
         NumJobs = v.Calendar.get((calendar.day_name[agora.weekday()],
                                   agora.hour, agora.minute), v.defNumJobs)
         print('{key:17s}{val.active!s:^7s}{val.numcpus:^7d}{N:^10d}'
