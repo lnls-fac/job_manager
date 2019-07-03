@@ -10,4 +10,4 @@ StandardOutput=syslog
 StandardError=syslog
 ExecStartPre=/bin/bash --login -c 'env > /tmp/.magic-environment-file'
 EnvironmentFile=-/tmp/.magic-environment-file
-ExecStart=pyjob_run.py
+ExecStart=/usr/local/bin/pyjob_run.py

@@ -1,2 +1,3 @@
 from .pyjob import *
-del pyjob
+
+__all__ = ['pyjob']

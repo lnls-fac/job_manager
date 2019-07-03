@@ -10,6 +10,7 @@ import signal
 import psutil
 import shutil
 
+import pyjob
 from pyjob import WAIT_TIME, handle_request as _handle_request, ServerDown,\
     JobQueue, Configs, MimicsPsutilPopen, createfile, load_file, MyStats, \
     JobQueue, JobView

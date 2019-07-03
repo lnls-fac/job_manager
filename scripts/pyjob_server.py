@@ -10,6 +10,8 @@ import pickle
 import sys
 import os
 import socket
+
+import pyjob
 from pyjob import Address, VERSION, MAX_BLOCK_LEN, PICKLE_PROTOCOL, WAIT_TIME,\
     SET_STRUCT_PARAM, STATUS, PROPERTIES, JobQueue, JobView, Jobs, load_file, \
     createfile
@@ -70,7 +72,9 @@ class RequestHandler(socketserver.StreamRequestHandler):
         InfoStruct = struct.Struct(SET_STRUCT_PARAM)
         info = self.rfile.read(InfoStruct.size)
         size, version = InfoStruct.unpack(info)
+        print('received request ', size, version)
         data = pickle.loads(self.rfile.read(size))
+        print('received data', data)
         if version != VERSION:
             reply = (False, 'client is incompatible')
         else:
@@ -81,6 +85,7 @@ class RequestHandler(socketserver.StreamRequestHandler):
             except Finish:
                 return
         data = pickle.dumps(reply, PICKLE_PROTOCOL)
+        print('replied', len(data), reply)
         self.wfile.write(InfoStruct.pack(len(data), VERSION))
         self.wfile.write(data)
 
@@ -138,7 +143,7 @@ class RequestHandler(socketserver.StreamRequestHandler):
             data += '\n'
         try:
             name = os.path.join(CONFIGFOLDER, SUBMITTED_FILENAME)
-            with open(name,mode='a') as fh:
+            with open(name, mode='a') as fh:
                 fh.write(data)
         except (TypeError, IOError, OSError) as err:
             print('Problem with file {0}:\n'.format(name), err)
@@ -154,7 +159,7 @@ class RequestHandler(socketserver.StreamRequestHandler):
             for k, v in ItsQueue.items():
                 if not isinstance(v, JobView) and v.status_key in sts:
                     keys2remove.append(k)
-                    self.Queue.update({k:v}) # not a jobview
+                    self.Queue.update({k: v}) # not a jobview
                 elif isinstance(v, JobView):
                     if k in self.Queue:
                         self.Queue[k].update(v)# jobview
@@ -213,7 +218,7 @@ class RequestHandler(socketserver.StreamRequestHandler):
                 self.Configs[clientName].last_contact = datetime.datetime.now()
                 return (True, self.Configs[clientName])
 
-            self.Configs.update({clientName:ItsConfigs})
+            self.Configs.update({clientName: ItsConfigs})
             self.Configs[clientName].active = 'on'
             self.Configs[clientName].last_contact = datetime.datetime.now()
             return (False, True)
