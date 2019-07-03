@@ -3,11 +3,11 @@ Description=Local client to run jobs for the JobManager server
 After=multi-user.target
 
 [Service]
-Group=fac
-User=fac
+Group=facs
+User=facs
 Type=simple
 StandardOutput=syslog
 StandardError=syslog
 ExecStartPre=/bin/bash --login -c 'env > /tmp/.magic-environment-file'
 EnvironmentFile=-/tmp/.magic-environment-file
-ExecStart=/home/fac_files/lnls-fac/job_manager/src/pyjob_run.py
+ExecStart=pyjob_run.py

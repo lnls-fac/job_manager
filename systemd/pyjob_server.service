@@ -3,11 +3,11 @@ Description=Server of the JobManager
 After=multi-user.target
 
 [Service]
-Group=fac
-User=fac
+Group=facs
+User=facs
 Type=simple
 StandardOutput=syslog
 StandardError=syslog
 ExecStartPre=/bin/bash --login -c 'env > /tmp/.magic-environment-file'
 EnvironmentFile=-/tmp/.magic-environment-file
-ExecStart=/home/fac_files/lnls-fac/job_manager/src/pyjob_server.py
+ExecStart=pyjob_server.py

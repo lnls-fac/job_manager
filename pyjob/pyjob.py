@@ -8,8 +8,8 @@ import os
 import signal
 import getpass
 import pwd
-import psutil
 import datetime
+import psutil
 
 # Address = ('fernando-linux', 8804)
 Address = ('lnls350-linux', 8804)
@@ -18,29 +18,32 @@ MAX_BLOCK_LEN = 1024*4
 WAIT_TIME = 10  # in seconds
 PICKLE_PROTOCOL = 3
 SET_STRUCT_PARAM = "!I 5s"
-STATUS = dict(q=1,  # queued
-              qu=1.5,  # queued by user
-              r=4,  # running
-              ru=4.5,  # sched to continue by user
-              p=2,  # paused
-              pu=2.5,  # paused by the user
-              w=3,  # waiting
-              t=5,  # terminated
-              tu=5.5,  # terminated by the user
-              e=6,  # ended
-              s=7)  # sent
+STATUS = dict(
+    q=1,  # queued
+    qu=1.5,  # queued by user
+    r=4,  # running
+    ru=4.5,  # sched to continue by user
+    p=2,  # paused
+    pu=2.5,  # paused by the user
+    w=3,  # waiting
+    t=5,  # terminated
+    tu=5.5,  # terminated by the user
+    e=6,  # ended
+    s=7)  # sent
 PROPERTIES = dict(
-    description=('{:^20s}', 'Description', lambda x: str(x)),
-    user=('{:^10s}', 'User', lambda x: str(x)),
-    working_dir=('{:^20s}', 'Working Directory', lambda x: str(x)),
+    description=('{:^20s}', 'Description', str),
+    user=('{:^10s}', 'User', str),
+    working_dir=('{:^20s}', 'Working Directory', str),
     creation_date=('{:^13s}', 'Creation', lambda x: x.strftime('%m/%d %H:%M')),
-    status_key=('{:^8s}', 'Status', lambda x: str(x)),
+    status_key=('{:^8s}', 'Status', str),
     hostname=('{:^10s}', 'Hostname', lambda x: x.split('-')[0]),
-    priority=('{:^7s}', 'Prior', lambda x: str(x)),
+    priority=('{:^7s}', 'Prior', str),
     runninghost=('{:^10s}', 'Run Host', lambda x: (x or "_").split('-')[0]),
-    possiblehosts=('{:^20s}', 'Can Run On', lambda x: x if x == 'all' else
-                   ','.join([y.split('-')[0] for y in sorted(x)])),
-    running_time=('{:^12s}', 'Time Run', lambda x: str(x)))
+    possiblehosts=(
+        '{:^20s}', 'Can Run On',
+        lambda x: x if x == 'all' else ','.join(
+            [y.split('-')[0] for y in sorted(x)])),
+    running_time=('{:^12s}', 'Time Run', str))
 
 
 class _SocketManager:
@@ -176,19 +179,20 @@ class Jobs:
         return representational_form(self)
 
     def __str__(self):
-        return ("description = {0.description},\n"
-                "user = {0.user},\n"
-                "working_dir = {0.working_dir},\n"
-                "creation_date = {0.creation_date},\n"
-                "status_key = {0.status_key},\n"
-                "hostname = {0.hostname},\n"
-                "runninghost = {0.runninghost}\n"
-                "possiblehosts = {0.possiblehosts}\n"
-                "priority = {0.priority},\n"
-                "input_file_names = {0.input_file_names},\n"
-                "execution_script_name = {0.execution_script_name},\n"
-                "output_file_names = {0.output_file_names}"
-                .format(self))
+        return (
+            "description = {0.description},\n"
+            "user = {0.user},\n"
+            "working_dir = {0.working_dir},\n"
+            "creation_date = {0.creation_date},\n"
+            "status_key = {0.status_key},\n"
+            "hostname = {0.hostname},\n"
+            "runninghost = {0.runninghost}\n"
+            "possiblehosts = {0.possiblehosts}\n"
+            "priority = {0.priority},\n"
+            "input_file_names = {0.input_file_names},\n"
+            "execution_script_name = {0.execution_script_name},\n"
+            "output_file_names = {0.output_file_names}"
+            .format(self))
 
     def __hash__(self):
         return hash(id(self))
@@ -389,9 +393,9 @@ def load_file(name, ignore=False):
 
 
 def representational_form(ob):
-    form = "{0}.{1}(" + ",  ".join(["{0} = {{2.{0}!r}}".format(x)
-                                   for x in sorted(ob.__dict__.keys())
-                                   if not x.startswith("_")]) + ")"
+    form = "{0}.{1}(" + ",  ".join(
+        ["{0} = {{2.{0}!r}}".format(x) for x in sorted(ob.__dict__.keys())
+            if not x.startswith("_")]) + ")"
     return form.format(ob.__class__.__module__, ob.__class__.__name__, ob)
 
 
@@ -400,20 +404,24 @@ class JobSelParseErr(Exception):
 
 
 def job_selection_parse_options(parser):
-    parser.add_option('-j', '--jobs', dest='jobs', type='str',
-                      help="list of jobs to interact with [format:"
-                      "job1,job2,...")
-    parser.add_option('-s', '--status', dest='status', type='str',
-                      help="Select the jobs by their status. "
-                      "[format: status1,status2,...  default: 'all']")
-    parser.add_option('-u', '--user', dest='user', type='str',
-                      help="Select the jobs by their user. "
-                      "[format: user1,user2,...  default: 'all']")
-    parser.add_option('-r', '--runninghost', dest='rhost', type='str',
-                      help="Select the jobs by their Running Host. "
-                      "[format: host1,host2,...  default: 'all']")
-    parser.add_option('-d', '--description', dest='descr', type='str',
-                      help="Select the jobs by a part of their description.")
+    parser.add_argument(
+        '-j', '--jobs', dest='jobs', type='str',
+        help="list of jobs to interact with [format:job1,job2,...")
+    parser.add_argument(
+        '-s', '--status', dest='status', type='str',
+        help="Select the jobs by their status. [format: status1,... "
+             "default: 'all']")
+    parser.add_argument(
+        '-u', '--user', dest='user', type='str',
+        help="Select the jobs by their user. [format: user1,... "
+             "default: 'all']")
+    parser.add_argument(
+        '-r', '--runninghost', dest='rhost', type='str',
+        help="Select the jobs by their Running Host. [format: host1,... "
+             "default: 'all']")
+    parser.add_argument(
+        '-d', '--description', dest='descr', type='str',
+        help="Select the jobs by a part of their description.")
     return parser
 
 
@@ -437,8 +445,9 @@ def job_selection_parse(opts):
             raise JobSelParseErr(err)
         nonexistent_jobs = list(jobs - set(Queue.keys()))
         if nonexistent_jobs:
-            raise JobSelParseErr('These jobs do not exist:' +
-                                 ' '.join([str(x) for x in nonexistent_jobs]))
+            raise JobSelParseErr(
+                'These jobs do not exist:' +
+                ' '.join([str(x) for x in nonexistent_jobs]))
         Queue = JobQueue({k: v for k, v in Queue.items() if k in jobs})
 
     if opts.status is not None:
@@ -469,12 +478,11 @@ class MatchClientsErr(Exception):
     pass
 
 
-MATCH_RULE = ("It is not necessary to give the full name of the "
-              "clients, only a small set of letters can be given, "
-              "for example, to specify the client fernando-linux, "
-              "only the word lin, or nan could be passed. However, "
-              "if other clients match the key they will be selected"
-              "too.")
+MATCH_RULE = (
+    "It is not necessary to give the full name of the clients, only a small"
+    " set of letters can be given, for example, to specify the client "
+    "fernando-linux, only the word lin, or nan could be passed. However, "
+    "if other clients match the key they will be selected too.")
 
 
 def match_clients(keys2Match, possibleClients=None):
@@ -492,14 +500,14 @@ def match_clients(keys2Match, possibleClients=None):
             if client.lower() in k.lower():
                 ConfigsMatched.update({k: possibleClients.pop(k)})
     if len(ConfigsMatched) < len(keys2Match):
-        raise MatchClientsErr("Some keys did not match any client "
-                              "in the server's list.")
+        raise MatchClientsErr(
+            "Some keys did not match any client in the server's list.")
     return ConfigsMatched
 
 
 if __name__ == '__main__':
-    job = Jobs(priority=1, possiblehosts={'asdf'},
-               input_files={'teste': ('las', 2)})
+    job = Jobs(
+        priority=1, possiblehosts={'asdf'}, input_files={'teste': ('las', 2)})
     job2 = Jobs(possiblehosts={'alskdf', 'laksdi'})
     job2view = JobView(job2)
     jobview = JobView(job)

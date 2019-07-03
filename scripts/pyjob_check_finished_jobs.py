@@ -4,6 +4,7 @@ import os
 import subprocess
 import argparse
 
+
 def find_rms_dirs(dirpath):
     dirs = [x for x in os.walk(dirpath)];
     for i in range(len(dirs)):
@@ -13,13 +14,15 @@ def find_rms_dirs(dirpath):
             return par_dir, rms_dirs
     return None, None
 
+
 def get_running_jobs_dir():
-    p = subprocess.Popen(['pyjob_qstat.py', '-c', 'working_dir'], stdout=subprocess.PIPE)
+    p = subprocess.Popen(
+        ['pyjob_qstat.py', '-c', 'working_dir'], stdout=subprocess.PIPE)
     lines = p.stdout.readlines()
     p.kill()
     running_jobs_dir = {}
     for i in range(1, len(lines)):
-        job = [x for x in  lines[i].decode("utf-8").split(" ") if len(x) != 0]
+        job = [x for x in lines[i].decode("utf-8").split(" ") if len(x) != 0]
         job_id = job[0]
         job_dir = job[1].replace('\n', '')
         if job_dir in running_jobs_dir:
@@ -28,18 +31,22 @@ def get_running_jobs_dir():
             running_jobs_dir[job_dir] = [job_id]
     return running_jobs_dir
 
+
 def get_running_jobs_descr():
-    p = subprocess.Popen(['pyjob_qstat.py', '-c',  'description'], stdout=subprocess.PIPE)
+    p = subprocess.Popen(
+        ['pyjob_qstat.py', '-c',  'description'], stdout=subprocess.PIPE)
     lines = p.stdout.readlines()
     p.kill()
     running_jobs_descr = {}
     for i in range(1, len(lines)):
-        job = [x for x in  lines[i].decode("utf-8").split(" ") if len(x) != 0]
+        job = [x for x in lines[i].decode("utf-8").split(" ") if len(x) != 0]
         running_jobs_descr[job[0]] = " ".join(job[1:])
     return running_jobs_descr
 
+
 def main():
-    parser = argparse.ArgumentParser(description="Check finished jobs in rms directories")
+    parser = argparse.ArgumentParser(
+        description="Check finished jobs in rms directories")
     parser.add_argument("-d", "--directory", type=str, help="search directory")
     args = parser.parse_args()
 
@@ -47,9 +54,9 @@ def main():
     if args.directory:
         os.chdir(args.directory)
 
-    ma_finished  = []; ex_finished  = []; xy_finished  = []
-    ma_running   = []; ex_running   = []; xy_running   = []
-    ma_not_found = []; ex_not_found = []; xy_not_found = []
+    ma_finished, ex_finished, xy_finished = [], [], []
+    ma_running, ex_running, xy_running = [], [], []
+    ma_not_found, ex_not_found, xy_not_found = [], [], []
 
     par_dir, rms_dirs = find_rms_dirs(os.getcwd())
 

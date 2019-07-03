@@ -9,12 +9,13 @@ import time
 import signal
 import psutil
 import shutil
-import Global
 
-TEMPFOLDER = os.path.join(
-        os.path.split(os.path.split(Global.__file__)[0])[0], '.TempFolders')
-RESULTSFOLDER = os.path.join(
-        os.path.split(os.path.split(Global.__file__)[0])[0], '.Results')
+from pyjob import WAIT_TIME, handle_request as _handle_request, ServerDown,\
+    JobQueue, Configs, MimicsPsutilPopen, createfile, load_file, MyStats, \
+    JobQueue, JobView
+
+TMPFLDR = os.path.join(os.path.expanduser('~'), '.pyjob', 'TempFolders')
+RESFLDR = os.path.join(os.path.expanduser('~'), '.pyjob', 'Results')
 RECSCRPT = (
     '''#!/bin/bash
 
@@ -31,16 +32,15 @@ SUBMITSCR = (
     touch {2}
     echo job {1:08d} done >> {1:08d}.out ''')
 SUBMITSCRNAME = 'run_{0:08d}'
-WAIT_TIME = Global.WAIT_TIME
 
 
 def handle_request(*items):
     server_down = True
     while server_down:
         try:
-            result = Global.handle_request(*items, exit_on_err=False)
+            result = _handle_request(*items, exit_on_err=False)
             server_down = False
-        except Global.ServerDown:
+        except ServerDown:
             time.sleep(WAIT_TIME)
             locally_manage_jobs()
     return result
@@ -55,9 +55,7 @@ def signal_handler(sig, frame):
 
 def shutdown():
     ok = handle_request('GOODBYE', True)
-    if ok:
-        sys.exit()
-    sys.exit(1)
+    sys.exit(0 if ok else 1)
 
 
 def pause():
@@ -65,9 +63,9 @@ def pause():
     time.sleep(2*WAIT_TIME)
 
 
-MyQueue = Global.JobQueue()
+MyQueue = JobQueue()
 jobid2proc = dict()
-MyConfigs = Global.Configs()
+MyConfigs = Configs()
 
 
 def load_jobs_from_last_run():
@@ -76,26 +74,25 @@ def load_jobs_from_last_run():
     Change the status to terminated if it was interrupted
     Set status to paused if the job is Stopped in the os'''
 
-    if not os.path.isdir(TEMPFOLDER):
-        os.mkdir(path=TEMPFOLDER)
-    for folder in os.listdir(path=TEMPFOLDER):
-        if os.path.isdir(os.path.join(TEMPFOLDER, folder)):
+    if not os.path.isdir(TMPFLDR):
+        os.mkdir(path=TMPFLDR)
+    for folder in os.listdir(path=TMPFLDR):
+        if os.path.isdir(os.path.join(TMPFLDR, folder)):
             jobid = int(folder.split('-')[1])
-            for file in os.listdir(path='/'.join([TEMPFOLDER, folder])):
+            for file in os.listdir(path='/'.join([TMPFLDR, folder])):
                 if file.startswith(JOBFILE[:4]):
                     pid = int(file.split('-')[1])
                     break
-            with open('/'.join([TEMPFOLDER, folder,
-                                JOBFILE.format(pid)])) as fh:
+            with open('/'.join([TMPFLDR, folder, JOBFILE.format(pid)])) as fh:
                 file_data = fh.read()
 
-            proc = Global.MimicsPsutilPopen(pid=pid)
+            proc = MimicsPsutilPopen(pid=pid)
             job = eval(file_data)
             state = proc.poll()
             folder = FOLDERFORMAT.format(jobid)
             if (state is not None or proc.name() not in '/'.join([
                                     folder, SUBMITSCRNAME.format(jobid)])):
-                if os.path.isfile('/'.join([TEMPFOLDER, folder, JOBDONE])):
+                if os.path.isfile('/'.join([TMPFLDR, folder, JOBDONE])):
                     job.status_key = 'e'
                 else:
                     job.status_key = 't'
@@ -136,9 +133,9 @@ def get_and_deal_with_configs():
             set_nice_process(proc)
 
     # returns the number of jobs that can run in this client now:
-    allowed = MyConfigs.Calendar.get((calendar.day_name[agora.weekday()],
-                                      agora.hour, agora.minute),
-                                     MyConfigs.defNumJobs)
+    allowed = MyConfigs.Calendar.get(
+        (calendar.day_name[agora.weekday()], agora.hour, agora.minute),
+        MyConfigs.defNumJobs)
     return allowed
 
 
@@ -151,35 +148,37 @@ def get_new_jobs_and_submit(njobstoget):
             return
         for k, v in NewQueue.items():
             # create temporary directory
-            tempdir = '/'.join([TEMPFOLDER, FOLDERFORMAT.format(k)])
+            tempdir = '/'.join([TMPFLDR, FOLDERFORMAT.format(k)])
             os.mkdir(tempdir)
             # create files
-            Global.createfile(
+            createfile(
                 name='/'.join([tempdir, SUBMITSCRNAME.format(k)]),
                 data=SUBMITSCR.format(v.execution_script_name, k, JOBDONE),
-                stats=Global.MyStats(st_mode=0o774))
+                stats=MyStats(st_mode=0o774))
             for name, info in v.execution_script.items():
-                Global.createfile(name='/'.join([tempdir, name]),
-                                  data=info[1], stats=info[0])
+                createfile(
+                    name='/'.join([tempdir, name]),
+                    data=info[1], stats=info[0])
             for name, info in v.input_files.items():
-                Global.createfile(name='/'.join([tempdir, name]),
-                                  data=info[1], stats=info[0])
+                createfile(
+                    name='/'.join([tempdir, name]),
+                    data=info[1], stats=info[0])
             for name, info in v.output_files.items():
-                Global.createfile(name='/'.join([tempdir, name]),
-                                  data=info[1], stats=info[0])
+                createfile(
+                    name='/'.join([tempdir, name]),
+                    data=info[1], stats=info[0])
             # submit job
-            proc = psutil.Popen('/'.join([tempdir, SUBMITSCRNAME.format(k)]),
-                                stdout=subprocess.DEVNULL,
-                                stderr=subprocess.DEVNULL,
-                                start_new_session=True,
-                                cwd=tempdir)
+            proc = psutil.Popen(
+                '/'.join([tempdir, SUBMITSCRNAME.format(k)]),
+                stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL,
+                start_new_session=True, cwd=tempdir)
             # update queues
             v.status_key = 'r'
             proc.nice(MyConfigs.niceness)
             MyQueue.update({k: v})
             jobid2proc.update({k: proc})
             # create job file to be loaded later, if necessary:
-            Global.createfile(
+            createfile(
                 name='/'.join([tempdir, JOBFILE.format(proc.pid)]),
                 data=repr(v))
 
@@ -203,14 +202,14 @@ def locally_manage_jobs(allowed=None):  # returns njobstoget
     for jobid, proc in jobid2proc.items():
         folder = FOLDERFORMAT.format(jobid)
         if proc.poll() is not None:
-            if os.path.isfile('/'.join([TEMPFOLDER, folder, JOBDONE])):
+            if os.path.isfile('/'.join([TMPFLDR, folder, JOBDONE])):
                 MyQueue[jobid].status_key = 'e'
             else:
                 if MyQueue[jobid].status_key != 'q':
                     MyQueue[jobid].status_key = 't'
         else:
-            if proc.status() in {psutil.STATUS_RUNNING,
-                                 psutil.STATUS_SLEEPING}:
+            statuses = {psutil.STATUS_RUNNING, psutil.STATUS_SLEEPING}
+            if proc.status() in statuses:
                 count += 1
             a = get_time_process(proc)
             a = str(datetime.timedelta(seconds=int(a)))
@@ -220,14 +219,14 @@ def locally_manage_jobs(allowed=None):  # returns njobstoget
     # load data from finished and stopped jobs
     for k, v in MyQueue.items():
         if v.status_key in {'e', 't', 'q'}:
-            folder = '/'.join([TEMPFOLDER, FOLDERFORMAT.format(k)])
+            folder = '/'.join([TMPFLDR, FOLDERFORMAT.format(k)])
             files = os.listdir(path=folder)
-            for file in set(files) - (v.input_files.keys() |
-                                      set([JOBDONE, SUBMITSCRNAME.format(k)])):
-                data = Global.load_file(os.path.join(folder, file))
+            st = v.input_files.keys() | set([JOBDONE, SUBMITSCRNAME.format(k)])
+            for file in set(files) - st:
+                data = load_file(os.path.join(folder, file))
                 v.output_files.update({file: data})
             for file in v.input_files.keys():  # Reload the input_files
-                data = Global.load_file(os.path.join(folder, file))
+                data = load_file(os.path.join(folder, file))
                 v.input_files.update({file: data})
             MyQueue.update({k: v})
 
@@ -235,9 +234,9 @@ def locally_manage_jobs(allowed=None):  # returns njobstoget
     agora = MyConfigs.last_contact or datetime.datetime.now()
     if allowed is None:
         agora = datetime.datetime.now()
-        allowed = MyConfigs.Calendar.get((calendar.day_name[agora.weekday()],
-                                          agora.hour, agora.minute),
-                                         MyConfigs.defNumJobs)
+        allowed = MyConfigs.Calendar.get(
+            (calendar.day_name[agora.weekday()], agora.hour, agora.minute),
+            MyConfigs.defNumJobs)
 
     # Stop or continue the jobs in this client
     i = 0
@@ -262,10 +261,11 @@ def locally_manage_jobs(allowed=None):  # returns njobstoget
     NumJobs = MyConfigs.Calendar.get(
         (calendar.day_name[agora.weekday()], agora.hour, agora.minute),
         MyConfigs.defNumJobs)
-    print('{0:19s}: NJPermtd={1:03d}, '.format(
+    print(
+        '{0:19s}: NJPermtd={1:03d}, '.format(
             agora.strftime('%Y/%m/%d %H:%M:%S'), MyConfigs.totalJobs) +
-          'NJRecvd={0:03d},  NJRunning={1:03d}'.format(NumJobs,
-                                                       MyConfigs.running))
+        'NJRecvd={0:03d},  NJRunning={1:03d}'.format(
+            NumJobs, MyConfigs.running))
     return njobstoget if njobstoget > 0 else 0
 
 
@@ -278,7 +278,7 @@ def get_and_deal_with_job_signals():  # returns NotMine
 
     # Verify if the server thinks this client has jobs which it doesn't and
     # return them to the queue in case they are not finished yet:
-    NotMine = Global.JobQueue()
+    NotMine = JobQueue()
     isbigger = set(Queue2Deal.keys()) - set(MyQueue.keys())
     for k in isbigger:
         v = Queue2Deal.pop(k)
@@ -326,14 +326,14 @@ def update_jobs_on_server_and_remove_finished_jobs(Queue2Send):
         if v.status_key in {'e', 't', 'q'}:
             Queue2Send.update({k: v})
         else:
-            Queue2Send.update({k: Global.JobView(v)})
+            Queue2Send.update({k: JobView(v)})
 
     ok, keys2remove = handle_request('UPDATE_JOBS', Queue2Send)
     if ok:
         for key in keys2remove:
             jobid2proc.pop(key)
             MyQueue.pop(key)
-            shutil.rmtree('/'.join([TEMPFOLDER, FOLDERFORMAT.format(key)]))
+            shutil.rmtree('/'.join([TMPFLDR, FOLDERFORMAT.format(key)]))
 
 
 def get_results_from_server_and_save():
@@ -348,29 +348,31 @@ def get_results_from_server_and_save():
                 fh.write('teste')
             os.remove(os.path.join(working_dir, 'test'))
         except PermissionError:
-            if not os.path.isdir(RESULTSFOLDER):
-                os.mkdir(path=RESULTSFOLDER)
-            working_dir = '/'.join([RESULTSFOLDER, FOLDERFORMAT.format(k)])
+            if not os.path.isdir(RESFLDR):
+                os.mkdir(path=RESFLDR)
+            working_dir = '/'.join([RESFLDR, FOLDERFORMAT.format(k)])
             os.mkdir(working_dir)
 
         files = []
         for name, content in v.output_files.items():
             if not name.startswith(JOBFILE[0:4]):
                 files.append(name)
-                Global.createfile(name=os.path.join(working_dir, name),
-                                  data=content[1], stats=content[0])
+                createfile(
+                    name=os.path.join(working_dir, name),
+                    data=content[1], stats=content[0])
         for name, content in v.input_files.items():
             files.append(name)
-            Global.createfile(name=os.path.join(working_dir, name),
-                              data=content[1], stats=content[0])
+            createfile(
+                name=os.path.join(working_dir, name),
+                data=content[1], stats=content[0])
 
         # create script to copy the files to the right folder
         if working_dir != v.working_dir:
             rec_file = RECSCRPT.format(working_dir + '/{'+','.join(files)+'}',
                                        v.working_dir)
-            Global.createfile(name='/'.join([working_dir, RECSCRPTNAME]),
-                              data=rec_file,
-                              stats=Global.MyStats(st_mode=0o774))
+            createfile(
+                name='/'.join([working_dir, RECSCRPTNAME]),
+                data=rec_file, stats=MyStats(st_mode=0o774))
 
 
 def main():
