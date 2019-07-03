@@ -36,7 +36,7 @@ def main():
              "status flag of the jobs.",
         default=False)
     parser.add_argument(
-        '-c', '--choose', dest='choose', type='str',
+        '-c', '--choose', dest='choose', type=str,
         help="If this option is given, the user can specify which "
              "job properties will be shown. [format: "
              "prop1,prop2,...  default: 'prior,status,user,runninghost,"

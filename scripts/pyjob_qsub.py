@@ -13,26 +13,26 @@ def main():
     # configuration of the parser for the arguments
     parser = argparse.ArgumentParser()
     parser.add_argument(
-        '-d', '--description', dest='description', type='str',
+        '-d', '--description', dest='description', type=str,
         help="description of the job [default: 'generic job']")
     parser.add_argument(
-        '-e', '--exec', dest='exec_script_name', type='str',
+        '-e', '--exec', dest='exec_script_name', type=str,
         help="name of the script to run in the cluster "
              "[no Default, mandatory]")
     parser.add_argument(
-        '-i', '--inputFiles', dest='input_file_names', type='str',
+        '-i', '--inputFiles', dest='input_file_names', type=str,
         help="name of the input files needed to run the job. For more than one"
              " file, separate the names with commas and no space. ")
     parser.add_argument(
-        '-w', '--workingDirectory', dest='work_dir', type='str',
+        '-w', '--workingDirectory', dest='work_dir', type=str,
         help="Working directory of the job: where the execution file and input"
              " files are and the results will be put [default: pwd]")
     parser.add_argument(
-        '-p', '--priority', dest='prior', type='int',
+        '-p', '--priority', dest='prior', type=int,
         help="Integer which specify the priority of the job. Higher numbers"
              " have higher priority (negative allowed) [default: 0]")
     parser.add_argument(
-        '-H', '--possibleHosts', dest='hosts', type='str',
+        '-H', '--possibleHosts', dest='hosts', type=str,
         help="Set the list of possible hosts to run the jobs [format: append="
              "host1,... or set=host1,... default='all'. " + MATCH_RULE)
 

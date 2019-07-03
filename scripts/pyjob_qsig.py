@@ -12,16 +12,16 @@ def main():
     group = job_selection_parse_options(group)
     group = parser.add_argument_group("Signals Options")
     group.add_argument(
-        '-S', '--signal', dest='signal', type='str',
+        '-S', '--signal', dest='signal', type=str,
         help="Send signal to jobs. Options are: kill, pause, "
              "continue and queue. The last signal brings back the jobs "
              "to the queue. If they have begun to run"
              " the outputs generated so far will be loaded.")
     group.add_argument(
-        '-P', '--priority', dest='priority', type='int',
+        '-P', '--priority', dest='priority', type=int,
         help="Change priority of jobs. Must be an integer")
     group.add_argument(
-        '-H', '--possibleHosts', dest='hosts', type='str',
+        '-H', '--possibleHosts', dest='hosts', type=str,
         help="Change the list of possible hosts to run the"
              "jobs [format: append=host1,host2,... or set=host1,host2"
              ",..." + MATCH_RULE)
@@ -42,7 +42,7 @@ def main():
         print(err)
         return
 
-    if Queue.SelAttrVal(attr='status_key', value={'t','e','tu'}):
+    if Queue.SelAttrVal(attr='status_key', value={'t', 'e', 'tu'}):
         print("You are trying to change a job which is finished: Operation"
               " not allowed.")
         return

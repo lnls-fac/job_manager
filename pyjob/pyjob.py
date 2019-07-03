@@ -406,22 +406,22 @@ class JobSelParseErr(Exception):
 
 def job_selection_parse_options(parser):
     parser.add_argument(
-        '-j', '--jobs', dest='jobs', type='str',
+        '-j', '--jobs', dest='jobs', type=str,
         help="list of jobs to interact with [format:job1,job2,...")
     parser.add_argument(
-        '-s', '--status', dest='status', type='str',
+        '-s', '--status', dest='status', type=str,
         help="Select the jobs by their status. [format: status1,... "
              "default: 'all']")
     parser.add_argument(
-        '-u', '--user', dest='user', type='str',
+        '-u', '--user', dest='user', type=str,
         help="Select the jobs by their user. [format: user1,... "
              "default: 'all']")
     parser.add_argument(
-        '-r', '--runninghost', dest='rhost', type='str',
+        '-r', '--runninghost', dest='rhost', type=str,
         help="Select the jobs by their Running Host. [format: host1,... "
              "default: 'all']")
     parser.add_argument(
-        '-d', '--description', dest='descr', type='str',
+        '-d', '--description', dest='descr', type=str,
         help="Select the jobs by a part of their description.")
     return parser
 

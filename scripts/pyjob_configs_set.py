@@ -10,22 +10,22 @@ def main():
     # configuration of the parser for the arguments
     parser = argparse.ArgumentParser()
     parser.add_argument(
-        '-c', '--clients', dest='clients', type='str',
+        '-c', '--clients', dest='clients', type=str,
         help="list of hosts to interact with. "
              "[format: client1,client2,...  default: 'this']. "
              "Use 'all' to get all clients. " + MATCH_RULE)
     parser.add_argument(
-        '-n', '--niceness', dest='niceness', type='int',
+        '-n', '--niceness', dest='niceness', type=int,
         help="Niceness of the jobs submitted by the clients. "
              "[default: 'current value']")
     parser.add_argument(
-        '--shutdown', dest='shut', type='string',
+        '--shutdown', dest='shut', type=str,
         help="If true shutdown the clients. ")
     parser.add_argument(
-        '--MoreJobs', dest='More', type='string',
+        '--MoreJobs', dest='More', type=str,
         help="If false, the clients won't ask for new jobs.")
     parser.add_argument(
-        '--defnumproc', dest='defproc', type='int',
+        '--defnumproc', dest='defproc', type=int,
         help="Default number of processes the clients can run."
              "It means that for the set of (W,H,M) not specified "
              "in the calendar this will be the number of jobs each"
@@ -38,24 +38,24 @@ def main():
              "will be restored.")
     group = parser.add_argument("Calendar Options")
     group.add_argument(
-        '--calendar', dest='calendar', type='str',
+        '--calendar', dest='calendar', type=str,
         help="If this option is given, the calendar of the "
              "clients will be set according the following options"
              " to the (W,H,M) specifications for the number of "
              "processes to run. [Possible values: "
              "'append', 'set' and 'empty']   [default: 'append']")
     group.add_argument(
-        '-W', '--weekday', dest='week', type='str',
+        '-W', '--weekday', dest='week', type=str,
         help="list of week days to set the calendar. "
              "[format: day1,day2,... default is the weekday of today]")
     group.add_argument(
-        '-i', '--initial', dest='initial', type='str',
+        '-i', '--initial', dest='initial', type=str,
         help="Initial time to set the calendar. [format H:M   default 00:00]")
     group.add_argument(
-        '-f', '--final', dest='final', type='str',
+        '-f', '--final', dest='final', type=str,
         help="Final time set the calendar. [format H:M   default 23:59]")
     group.add_argument(
-        '-N', '--num_proc', dest='np', type='int',
+        '-N', '--num_proc', dest='np', type=int,
         help="Integer which specify the number of processes to "
              "set to the calendar) [no Default Value]")
 
@@ -64,9 +64,9 @@ def main():
     try:
         if opts.clients == 'all':
             clients = opts.clients
-            ok, ConfigsReceived = handle_request('GET_CONFIGS','all')
+            ok, ConfigsReceived = handle_request('GET_CONFIGS', 'all')
         elif opts.clients is None:
-            ok, ConfigsReceived = handle_request('GET_CONFIGS','this')
+            ok, ConfigsReceived = handle_request('GET_CONFIGS', 'this')
         else:
             clients = set(opts.clients.split(","))
             ConfigsReceived = match_clients(clients)
@@ -122,12 +122,11 @@ def main():
             FH, FM = final
 
         if ((initial is not None) and (final is not None)) and (initial > final):
-             print('Initial time must be smaller than the final.')
-             return
+            print('Initial time must be smaller than the final.')
+            return
         interval = tuple((H, M) for H in range(IH, FH+1)
-                         for M in range(0,60)
+                         for M in range(0, 60)
                          if (IH, IM) <= (H, M) <= (FH, FM))
-
 
         calendars = {(x, y, z): np for x in days for (y, z) in interval}
     else:
@@ -177,14 +176,12 @@ def main():
         for k in ConfigsReceived.keys():
             ConfigsReceived[k].MoreJobs = More
 
-
     if opts.defproc is not None:
         defproc = opts.defproc
         for k in ConfigsReceived.keys():
             ConfigsReceived[k].defNumJobs = defproc
 
-
-    ok, clients = handle_request('SET_CONFIGS',ConfigsReceived, RmClie)
+    ok, clients = handle_request('SET_CONFIGS', ConfigsReceived, RmClie)
     if ok:
         print('Success. Configurations will be set! for \n',
               ', '.join(tuple(ConfigsReceived)))

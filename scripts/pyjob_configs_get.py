@@ -10,7 +10,7 @@ def main():
     # configuration of the parser for the arguments
     parser = argparse.ArgumentParser()
     parser.add_argument(
-        '-c', '--clients', dest='clients', type='str',
+        '-c', '--clients', dest='clients', type=str,
         help="list of hosts to get the configs. [format: "
              "client1,client2,...  default: 'all']" + MATCH_RULE)
     parser.add_argument(
