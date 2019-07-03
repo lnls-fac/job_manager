@@ -36,7 +36,7 @@ def main():
              "from the server's list. If the client is 'on', as soon"
              "as it makes contact to the server, the configurations"
              "will be restored.")
-    group = parser.add_argument("Calendar Options")
+    group = parser.add_argument_group("Calendar Options")
     group.add_argument(
         '--calendar', dest='calendar', type=str,
         help="If this option is given, the calendar of the "

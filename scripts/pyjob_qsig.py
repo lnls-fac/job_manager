@@ -47,7 +47,8 @@ def main():
               " not allowed.")
         return
 
-    signals = dict(kill='tu', pause='pu', continue='ru', queue='qu')
+    signals = dict({
+        'kill': 'tu', 'pause': 'pu', 'continue': 'ru', 'queue': 'qu'})
     if opts.signal is not None:
         opts.signal = opts.signal.lower()
         if opts.signal not in signals.keys():
