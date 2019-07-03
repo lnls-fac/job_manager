@@ -3,8 +3,8 @@ Description=Server of the JobManager
 After=multi-user.target
 
 [Service]
-Group=fac
-User=fac
+Group=facs
+User=facs
 Type=simple
 StandardOutput=syslog
 StandardError=syslog
