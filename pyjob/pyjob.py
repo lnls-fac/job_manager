@@ -73,7 +73,6 @@ def handle_request(*items, wait_for_reply=True, exit_on_err=True):
             if not wait_for_reply:
                 return
             size_data = sock.recv(InfoStruct.size)
-            print(size_data)
             size = InfoStruct.unpack(size_data)[0]
             result = bytearray()
             while True:

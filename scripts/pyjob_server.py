@@ -72,9 +72,7 @@ class RequestHandler(socketserver.StreamRequestHandler):
         InfoStruct = struct.Struct(SET_STRUCT_PARAM)
         info = self.rfile.read(InfoStruct.size)
         size, version = InfoStruct.unpack(info)
-        print('received request ', size, version)
         data = pickle.loads(self.rfile.read(size))
-        print('received data', data)
         if version != VERSION:
             reply = (False, 'client is incompatible')
         else:
@@ -85,7 +83,6 @@ class RequestHandler(socketserver.StreamRequestHandler):
             except Finish:
                 return
         data = pickle.dumps(reply, PICKLE_PROTOCOL)
-        print('replied', len(data), reply)
         self.wfile.write(InfoStruct.pack(len(data), VERSION))
         self.wfile.write(data)
 
